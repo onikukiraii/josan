@@ -208,12 +208,17 @@ def add_off_day_count(
     member_ids: list[int],
     dates: list[datetime.date],
     member_off_days: dict[int, int],
+    part_time_ids: set[int] | None = None,
 ) -> None:
-    """H11: 公休日数 = 月の規定日数"""
+    """H11: 公休日数 = 月の規定日数（非常勤は >=）"""
+    pt = part_time_ids or set()
     for m in member_ids:
         required_off = member_off_days.get(m, 10)
         off_vars = [x[m][str(d)][ShiftType.day_off] for d in dates]
-        model.add(sum(off_vars) == required_off)
+        if m in pt:
+            model.add(sum(off_vars) >= required_off)
+        else:
+            model.add(sum(off_vars) == required_off)
 
 
 def add_shift_request_hard(
