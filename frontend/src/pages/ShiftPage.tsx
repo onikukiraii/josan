@@ -191,15 +191,15 @@ export function ShiftPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+        <h1 className="text-2xl font-bold tracking-tight text-warm-gray-900">
           シフト表
         </h1>
-        <p className="text-sm text-slate-500 mt-1">
+        <p className="text-sm text-warm-gray-500 mt-1">
           生成されたシフトスケジュールの確認・編集を行います
         </p>
       </div>
 
-      <div className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-4">
+      <div className="flex items-center gap-3 rounded-lg border border-warm-gray-200 bg-white p-4">
         <YearMonthPicker value={yearMonth} onChange={handleYearMonthChange} />
         <div className="flex-1" />
         <Button
@@ -227,7 +227,7 @@ export function ShiftPage() {
         <Alert>
           <AlertDescription>
             <div className="space-y-2">
-              <p className="font-medium text-slate-900">
+              <p className="font-medium text-warm-gray-900">
                 充足できなかった希望休があります
               </p>
               <div className="flex flex-wrap gap-2">
@@ -251,19 +251,19 @@ export function ShiftPage() {
         </div>
       ) : schedule ? (
         <>
-          <div className="rounded-lg border border-slate-200 bg-white">
+          <div className="rounded-lg border border-warm-gray-200 bg-white">
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-slate-50">
-                    <TableHead className="sticky left-0 z-10 bg-slate-50 font-semibold text-slate-700 min-w-16">
+                  <TableRow className="bg-warm-gray-50">
+                    <TableHead className="sticky left-0 z-10 bg-warm-gray-50 font-semibold text-warm-gray-700 min-w-16">
                       日付
                     </TableHead>
                     {DISPLAY_SHIFT_TYPES.map((st) => (
                       <TableHead
                         key={st}
-                        className={`font-semibold text-slate-700 text-center min-w-20 ${
-                          NIGHT_SHIFT_TYPES.includes(st) ? 'bg-slate-200' : ''
+                        className={`font-semibold text-warm-gray-700 text-center min-w-20 ${
+                          NIGHT_SHIFT_TYPES.includes(st) ? 'bg-warm-gray-200' : ''
                         }`}
                       >
                         {SHIFT_TYPE_LABEL[st]}
@@ -280,18 +280,18 @@ export function ShiftPage() {
                     const dayAssignments = assignmentMap.get(dateStr)
 
                     let rowBg = ''
-                    if (isSunday) rowBg = 'bg-red-50'
-                    else if (isSaturday) rowBg = 'bg-blue-50'
+                    if (isSunday) rowBg = 'bg-sunday-bg'
+                    else if (isSaturday) rowBg = 'bg-saturday-bg'
 
                     return (
                       <TableRow key={dateStr} className={rowBg}>
                         <TableCell
                           className={`sticky left-0 z-10 font-medium text-sm whitespace-nowrap ${
                             isSunday
-                              ? 'bg-red-50 text-red-700'
+                              ? 'bg-sunday-bg text-sunday'
                               : isSaturday
-                                ? 'bg-blue-50 text-blue-700'
-                                : 'bg-white text-slate-900'
+                                ? 'bg-saturday-bg text-saturday'
+                                : 'bg-white text-warm-gray-900'
                           }`}
                         >
                           {date.getDate()} ({getDayLabel(date)})
@@ -303,9 +303,9 @@ export function ShiftPage() {
 
                           let cellBg = ''
                           if (isNight) {
-                            if (isSunday) cellBg = 'bg-red-100'
-                            else if (isSaturday) cellBg = 'bg-blue-100'
-                            else cellBg = 'bg-slate-100'
+                            if (isSunday) cellBg = 'bg-sunday-bg'
+                            else if (isSaturday) cellBg = 'bg-saturday-bg'
+                            else cellBg = 'bg-warm-gray-100'
                           }
 
                           return (
@@ -317,10 +317,10 @@ export function ShiftPage() {
                                 <DropdownMenuTrigger asChild>
                                   <button
                                     type="button"
-                                    className={`w-full px-1 py-1 rounded text-xs cursor-pointer hover:bg-slate-200/60 transition-colors ${
+                                    className={`w-full px-1 py-1 rounded text-xs cursor-pointer hover:bg-warm-gray-200/60 transition-colors ${
                                       assignment
-                                        ? 'text-slate-900 font-medium'
-                                        : 'text-slate-400'
+                                        ? 'text-warm-gray-900 font-medium'
+                                        : 'text-warm-gray-400'
                                     } max-w-16 truncate block mx-auto`}
                                   >
                                     {assignment ? assignment.member_name : '—'}
@@ -358,44 +358,44 @@ export function ShiftPage() {
           </div>
 
           {summary && (
-            <div className="rounded-lg border border-slate-200 bg-white">
-              <div className="p-4 border-b border-slate-200 bg-slate-50">
-                <h2 className="text-lg font-semibold text-slate-900">
+            <div className="rounded-lg border border-warm-gray-200 bg-white">
+              <div className="p-4 border-b border-warm-gray-200 bg-warm-gray-50">
+                <h2 className="text-lg font-semibold text-warm-gray-900">
                   サマリー
                 </h2>
               </div>
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-slate-50">
-                      <TableHead className="font-semibold text-slate-700">メンバー</TableHead>
-                      <TableHead className="font-semibold text-slate-700 text-center">勤務日数</TableHead>
-                      <TableHead className="font-semibold text-slate-700 text-center">公休</TableHead>
-                      <TableHead className="font-semibold text-slate-700 text-center">夜勤回数</TableHead>
-                      <TableHead className="font-semibold text-slate-700 text-center">日祝出勤</TableHead>
-                      <TableHead className="font-semibold text-slate-700 text-center">希望休</TableHead>
+                    <TableRow className="bg-warm-gray-50">
+                      <TableHead className="font-semibold text-warm-gray-700">メンバー</TableHead>
+                      <TableHead className="font-semibold text-warm-gray-700 text-center">勤務日数</TableHead>
+                      <TableHead className="font-semibold text-warm-gray-700 text-center">公休</TableHead>
+                      <TableHead className="font-semibold text-warm-gray-700 text-center">夜勤回数</TableHead>
+                      <TableHead className="font-semibold text-warm-gray-700 text-center">日祝出勤</TableHead>
+                      <TableHead className="font-semibold text-warm-gray-700 text-center">希望休</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {summary.members.map((ms: MemberSummary) => (
                       <TableRow key={ms.member_id}>
-                        <TableCell className="font-medium text-slate-900">
+                        <TableCell className="font-medium text-warm-gray-900">
                           {ms.member_name}
                         </TableCell>
-                        <TableCell className="text-center text-slate-700">
+                        <TableCell className="text-center text-warm-gray-700">
                           {ms.working_days}
                         </TableCell>
-                        <TableCell className="text-center text-slate-700">
+                        <TableCell className="text-center text-warm-gray-700">
                           {ms.day_off_count}
                         </TableCell>
-                        <TableCell className="text-center text-slate-700">
+                        <TableCell className="text-center text-warm-gray-700">
                           {ms.night_shift_count}
                         </TableCell>
-                        <TableCell className="text-center text-slate-700">
+                        <TableCell className="text-center text-warm-gray-700">
                           {ms.holiday_work_count}
                         </TableCell>
-                        <TableCell className="text-center text-slate-700">
-                          <span className={ms.request_fulfilled < ms.request_total ? 'text-amber-600 font-medium' : ''}>
+                        <TableCell className="text-center text-warm-gray-700">
+                          <span className={ms.request_fulfilled < ms.request_total ? 'text-warning font-medium' : ''}>
                             {ms.request_fulfilled}/{ms.request_total}
                           </span>
                         </TableCell>
@@ -408,8 +408,8 @@ export function ShiftPage() {
           )}
         </>
       ) : (
-        <div className="rounded-lg border border-slate-200 bg-white p-12 text-center">
-          <p className="text-slate-500">
+        <div className="rounded-lg border border-warm-gray-200 bg-white p-12 text-center">
+          <p className="text-warm-gray-500">
             シフトが生成されていません。「生成」ボタンを押してシフトを作成してください。
           </p>
         </div>

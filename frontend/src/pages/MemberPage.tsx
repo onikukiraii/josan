@@ -154,6 +154,22 @@ export function MemberPage() {
     }
   }, [deleteTarget, fetchMembers])
 
+  const handleCopy = useCallback(async (member: MemberResponse) => {
+    try {
+      setError(null)
+      await membersApi.create({
+        name: `${member.name}（コピー）`,
+        qualification: member.qualification,
+        employment_type: member.employment_type,
+        max_night_shifts: member.max_night_shifts,
+        capabilities: [...member.capabilities],
+      })
+      await fetchMembers()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'コピーに失敗しました')
+    }
+  }, [fetchMembers])
+
   const toggleCapability = useCallback((cap: CapabilityType) => {
     setForm(prev => ({
       ...prev,
@@ -167,14 +183,14 @@ export function MemberPage() {
     <div className="mx-auto max-w-6xl space-y-6 p-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+          <h1 className="text-2xl font-bold tracking-tight text-warm-gray-900">
             メンバー管理
           </h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-warm-gray-500">
             スタッフの登録・編集・削除を行います
           </p>
         </div>
-        <Button onClick={openCreateDialog} className="bg-blue-600 hover:bg-blue-700">
+        <Button onClick={openCreateDialog} className="bg-brand-600 hover:bg-brand-700">
           新規登録
         </Button>
       </div>
@@ -195,7 +211,7 @@ export function MemberPage() {
                 <TableHead className="w-[100px]">雇用形態</TableHead>
                 <TableHead className="w-[100px]">夜勤上限</TableHead>
                 <TableHead>能力</TableHead>
-                <TableHead className="w-[120px] text-right">アクション</TableHead>
+                <TableHead className="w-[180px] text-right">アクション</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -219,7 +235,7 @@ export function MemberPage() {
           </Table>
         </div>
       ) : members.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16 text-slate-500">
+        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16 text-warm-gray-500">
           <p className="text-lg font-medium">メンバーが登録されていません</p>
           <p className="mt-1 text-sm">「新規登録」ボタンからスタッフを追加してください</p>
         </div>
@@ -227,40 +243,40 @@ export function MemberPage() {
         <div className="rounded-lg border shadow-sm">
           <Table>
             <TableHeader>
-              <TableRow className="bg-slate-50/80">
-                <TableHead className="w-[140px] font-semibold text-slate-700">名前</TableHead>
-                <TableHead className="w-[100px] font-semibold text-slate-700">職能</TableHead>
-                <TableHead className="w-[100px] font-semibold text-slate-700">雇用形態</TableHead>
-                <TableHead className="w-[100px] font-semibold text-slate-700">夜勤上限</TableHead>
-                <TableHead className="font-semibold text-slate-700">能力</TableHead>
-                <TableHead className="w-[120px] text-right font-semibold text-slate-700">アクション</TableHead>
+              <TableRow className="bg-warm-gray-50/80">
+                <TableHead className="w-[140px] font-semibold text-warm-gray-700">名前</TableHead>
+                <TableHead className="w-[100px] font-semibold text-warm-gray-700">職能</TableHead>
+                <TableHead className="w-[100px] font-semibold text-warm-gray-700">雇用形態</TableHead>
+                <TableHead className="w-[100px] font-semibold text-warm-gray-700">夜勤上限</TableHead>
+                <TableHead className="font-semibold text-warm-gray-700">能力</TableHead>
+                <TableHead className="w-[180px] text-right font-semibold text-warm-gray-700">アクション</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {members.map(member => (
                 <TableRow
                   key={member.id}
-                  className="transition-colors hover:bg-blue-50/50"
+                  className="transition-colors hover:bg-brand-50/50"
                 >
-                  <TableCell className="font-medium text-slate-900">
+                  <TableCell className="font-medium text-warm-gray-900">
                     {member.name}
                   </TableCell>
-                  <TableCell className="text-slate-600">
+                  <TableCell className="text-warm-gray-600">
                     {QUALIFICATION_LABEL[member.qualification]}
                   </TableCell>
-                  <TableCell className="text-slate-600">
+                  <TableCell className="text-warm-gray-600">
                     {EMPLOYMENT_TYPE_LABEL[member.employment_type]}
                   </TableCell>
-                  <TableCell className="text-slate-600">
+                  <TableCell className="text-warm-gray-600">
                     {member.max_night_shifts}回
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
-                      {member.capabilities.map(cap => (
+                      {[...member.capabilities].sort((a, b) => ALL_CAPABILITIES.indexOf(a) - ALL_CAPABILITIES.indexOf(b)).map(cap => (
                         <Badge
                           key={cap}
                           variant="secondary"
-                          className="bg-blue-50 text-xs text-blue-700 hover:bg-blue-100"
+                          className="bg-brand-50 text-xs text-brand-700 hover:bg-brand-100"
                         >
                           {CAPABILITY_LABEL[cap]}
                         </Badge>
@@ -273,15 +289,23 @@ export function MemberPage() {
                         variant="ghost"
                         size="sm"
                         onClick={() => openEditDialog(member)}
-                        className="text-slate-600 hover:text-blue-600"
+                        className="text-warm-gray-600 hover:text-brand-600"
                       >
                         編集
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
+                        onClick={() => handleCopy(member)}
+                        className="text-warm-gray-600 hover:text-brand-600"
+                      >
+                        コピー
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => setDeleteTarget(member)}
-                        className="text-slate-600 hover:text-red-600"
+                        className="text-warm-gray-600 hover:text-error"
                       >
                         削除
                       </Button>
@@ -294,21 +318,21 @@ export function MemberPage() {
         </div>
       )}
 
-      <p className="text-right text-sm text-slate-400">
+      <p className="text-right text-sm text-warm-gray-400">
         {!loading && `${members.length} 名登録済み`}
       </p>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle className="text-slate-900">
+            <DialogTitle className="text-warm-gray-900">
               {editingMember ? 'メンバー編集' : 'メンバー新規登録'}
             </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-5 py-4">
             <div className="space-y-2">
-              <Label htmlFor="member-name" className="text-slate-700">
+              <Label htmlFor="member-name" className="text-warm-gray-700">
                 名前
               </Label>
               <Input
@@ -316,20 +340,20 @@ export function MemberPage() {
                 value={form.name}
                 onChange={e => setForm(prev => ({ ...prev, name: e.target.value }))}
                 placeholder="スタッフ名を入力"
-                className="focus-visible:ring-blue-500"
+                className="focus-visible:ring-brand-500"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-slate-700">職能</Label>
+                <Label className="text-warm-gray-700">職能</Label>
                 <Select
                   value={form.qualification}
                   onValueChange={(v: Qualification) =>
                     setForm(prev => ({ ...prev, qualification: v }))
                   }
                 >
-                  <SelectTrigger className="focus:ring-blue-500">
+                  <SelectTrigger className="focus:ring-brand-500">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -343,14 +367,14 @@ export function MemberPage() {
               </div>
 
               <div className="space-y-2">
-                <Label className="text-slate-700">雇用形態</Label>
+                <Label className="text-warm-gray-700">雇用形態</Label>
                 <Select
                   value={form.employment_type}
                   onValueChange={(v: EmploymentType) =>
                     setForm(prev => ({ ...prev, employment_type: v }))
                   }
                 >
-                  <SelectTrigger className="focus:ring-blue-500">
+                  <SelectTrigger className="focus:ring-brand-500">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -365,14 +389,14 @@ export function MemberPage() {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-slate-700">夜勤上限（月あたり）</Label>
+              <Label className="text-warm-gray-700">夜勤上限（月あたり）</Label>
               <Select
                 value={String(form.max_night_shifts)}
                 onValueChange={v =>
                   setForm(prev => ({ ...prev, max_night_shifts: Number(v) }))
                 }
               >
-                <SelectTrigger className="w-[120px] focus:ring-blue-500">
+                <SelectTrigger className="w-[120px] focus:ring-brand-500">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -386,7 +410,7 @@ export function MemberPage() {
             </div>
 
             <div className="space-y-3">
-              <Label className="text-slate-700">能力</Label>
+              <Label className="text-warm-gray-700">能力</Label>
               <div className="grid grid-cols-3 gap-3">
                 {ALL_CAPABILITIES.map(cap => (
                   <div key={cap} className="flex items-center space-x-2">
@@ -394,11 +418,11 @@ export function MemberPage() {
                       id={`cap-${cap}`}
                       checked={form.capabilities.includes(cap)}
                       onCheckedChange={() => toggleCapability(cap)}
-                      className="data-[state=checked]:border-blue-600 data-[state=checked]:bg-blue-600"
+                      className="data-[state=checked]:border-brand-600 data-[state=checked]:bg-brand-600"
                     />
                     <Label
                       htmlFor={`cap-${cap}`}
-                      className="cursor-pointer text-sm font-normal text-slate-600"
+                      className="cursor-pointer text-sm font-normal text-warm-gray-600"
                     >
                       {CAPABILITY_LABEL[cap]}
                     </Label>
@@ -419,7 +443,7 @@ export function MemberPage() {
             <Button
               onClick={handleSubmit}
               disabled={submitting || !form.name.trim()}
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-brand-600 hover:bg-brand-700"
             >
               {submitting ? '保存中...' : editingMember ? '更新' : '登録'}
             </Button>
@@ -439,7 +463,7 @@ export function MemberPage() {
             <AlertDialogCancel>キャンセル</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-error hover:bg-error/90"
             >
               削除
             </AlertDialogAction>

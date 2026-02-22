@@ -171,16 +171,16 @@ export function MonthlySettingsPage() {
 
   const getColumnClass = useCallback((date: Date) => {
     const day = date.getDay()
-    if (day === 0) return 'bg-red-50/60'
-    if (day === 6) return 'bg-blue-50/60'
+    if (day === 0) return 'bg-sunday-bg/60'
+    if (day === 6) return 'bg-saturday-bg/60'
     return ''
   }, [])
 
   const getHeaderTextClass = useCallback((date: Date) => {
     const day = date.getDay()
-    if (day === 0) return 'text-red-500'
-    if (day === 6) return 'text-blue-600'
-    return 'text-gray-500'
+    if (day === 0) return 'text-sunday'
+    if (day === 6) return 'text-saturday'
+    return 'text-warm-gray-500'
   }, [])
 
   if (loading) {
@@ -198,12 +198,12 @@ export function MonthlySettingsPage() {
   return (
     <div className="space-y-8 p-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold tracking-tight text-gray-900">月次設定</h1>
+        <h1 className="text-xl font-bold tracking-tight text-warm-gray-900">月次設定</h1>
         <YearMonthPicker value={yearMonth} onChange={setYearMonth} />
       </div>
 
       <section className="space-y-4">
-        <h2 className="text-base font-semibold text-gray-800">希望休設定</h2>
+        <h2 className="text-base font-semibold text-warm-gray-800">希望休設定</h2>
 
         {fullTimeWarnings.length > 0 && (
           <Alert variant="destructive">
@@ -217,11 +217,11 @@ export function MonthlySettingsPage() {
           </Alert>
         )}
 
-        <div className="overflow-x-auto rounded-md border border-gray-200">
+        <div className="overflow-x-auto rounded-md border border-warm-gray-200">
           <table className="border-collapse text-xs">
             <thead>
               <tr>
-                <th className="sticky left-0 z-10 bg-gray-50 border-b border-r border-gray-200 px-3 py-2 text-left font-medium text-gray-700 min-w-[100px]">
+                <th className="sticky left-0 z-10 bg-warm-gray-50 border-b border-r border-warm-gray-200 px-3 py-2 text-left font-medium text-warm-gray-700 min-w-[100px]">
                   スタッフ
                 </th>
                 {dates.map((date) => {
@@ -229,9 +229,9 @@ export function MonthlySettingsPage() {
                   return (
                     <th
                       key={dateStr}
-                      className={`border-b border-r border-gray-200 px-0 py-1 text-center font-normal w-8 min-w-[2rem] ${getColumnClass(date)}`}
+                      className={`border-b border-r border-warm-gray-200 px-0 py-1 text-center font-normal w-8 min-w-[2rem] ${getColumnClass(date)}`}
                     >
-                      <div className="text-[11px] leading-tight text-gray-700">{date.getDate()}</div>
+                      <div className="text-[11px] leading-tight text-warm-gray-700">{date.getDate()}</div>
                       <div className={`text-[10px] leading-tight ${getHeaderTextClass(date)}`}>
                         {getDayLabel(date)}
                       </div>
@@ -244,12 +244,12 @@ export function MonthlySettingsPage() {
               {members.map((member) => {
                 const memberDates = requestMap.get(member.id) ?? new Set()
                 return (
-                  <tr key={member.id} className="hover:bg-gray-50/50">
-                    <td className="sticky left-0 z-10 bg-white border-b border-r border-gray-200 px-3 py-1.5 font-medium text-gray-700 whitespace-nowrap">
+                  <tr key={member.id} className="hover:bg-warm-gray-50/50">
+                    <td className="sticky left-0 z-10 bg-white border-b border-r border-warm-gray-200 px-3 py-1.5 font-medium text-warm-gray-700 whitespace-nowrap">
                       <div className="flex items-center gap-1.5">
                         <span>{member.name}</span>
                         {member.employment_type === 'part_time' && (
-                          <span className="text-[10px] text-gray-400 font-normal">非</span>
+                          <span className="text-[10px] text-warm-gray-400 font-normal">非</span>
                         )}
                       </div>
                     </td>
@@ -260,16 +260,16 @@ export function MonthlySettingsPage() {
                       return (
                         <td
                           key={dateStr}
-                          className={`border-b border-r border-gray-200 w-8 h-8 text-center cursor-pointer transition-colors duration-75 select-none ${getColumnClass(date)} ${
+                          className={`border-b border-r border-warm-gray-200 w-8 h-8 text-center cursor-pointer transition-colors duration-75 select-none ${getColumnClass(date)} ${
                             isActive
-                              ? 'bg-blue-100 hover:bg-blue-200'
-                              : 'hover:bg-gray-100'
+                              ? 'bg-brand-100 hover:bg-brand-200'
+                              : 'hover:bg-warm-gray-100'
                           } ${isSaving ? 'opacity-50' : ''}`}
                           onClick={() => toggleShiftRequest(member.id, dateStr)}
                         >
                           {isActive && (
                             <div className="flex items-center justify-center">
-                              <div className="w-2 h-2 rounded-full bg-blue-500" />
+                              <div className="w-2 h-2 rounded-full bg-brand-500" />
                             </div>
                           )}
                         </td>
@@ -284,13 +284,13 @@ export function MonthlySettingsPage() {
       </section>
 
       <section className="space-y-4">
-        <h2 className="text-base font-semibold text-gray-800">小児科医スケジュール</h2>
+        <h2 className="text-base font-semibold text-warm-gray-800">小児科医スケジュール</h2>
 
-        <div className="overflow-x-auto rounded-md border border-gray-200">
+        <div className="overflow-x-auto rounded-md border border-warm-gray-200">
           <table className="border-collapse text-xs">
             <thead>
               <tr>
-                <th className="sticky left-0 z-10 bg-gray-50 border-b border-r border-gray-200 px-3 py-2 text-left font-medium text-gray-700 min-w-[100px]">
+                <th className="sticky left-0 z-10 bg-warm-gray-50 border-b border-r border-warm-gray-200 px-3 py-2 text-left font-medium text-warm-gray-700 min-w-[100px]">
                   日付
                 </th>
                 {dates.map((date) => {
@@ -298,9 +298,9 @@ export function MonthlySettingsPage() {
                   return (
                     <th
                       key={dateStr}
-                      className={`border-b border-r border-gray-200 px-0 py-1 text-center font-normal w-8 min-w-[2rem] ${getColumnClass(date)}`}
+                      className={`border-b border-r border-warm-gray-200 px-0 py-1 text-center font-normal w-8 min-w-[2rem] ${getColumnClass(date)}`}
                     >
-                      <div className="text-[11px] leading-tight text-gray-700">{date.getDate()}</div>
+                      <div className="text-[11px] leading-tight text-warm-gray-700">{date.getDate()}</div>
                       <div className={`text-[10px] leading-tight ${getHeaderTextClass(date)}`}>
                         {getDayLabel(date)}
                       </div>
@@ -310,8 +310,8 @@ export function MonthlySettingsPage() {
               </tr>
             </thead>
             <tbody>
-              <tr className="hover:bg-gray-50/50">
-                <td className="sticky left-0 z-10 bg-white border-b border-r border-gray-200 px-3 py-1.5 font-medium text-gray-700 whitespace-nowrap">
+              <tr className="hover:bg-warm-gray-50/50">
+                <td className="sticky left-0 z-10 bg-white border-b border-r border-warm-gray-200 px-3 py-1.5 font-medium text-warm-gray-700 whitespace-nowrap">
                   小児科医
                 </td>
                 {dates.map((date) => {
@@ -321,16 +321,16 @@ export function MonthlySettingsPage() {
                   return (
                     <td
                       key={dateStr}
-                      className={`border-b border-r border-gray-200 w-8 h-8 text-center cursor-pointer transition-colors duration-75 select-none ${getColumnClass(date)} ${
+                      className={`border-b border-r border-warm-gray-200 w-8 h-8 text-center cursor-pointer transition-colors duration-75 select-none ${getColumnClass(date)} ${
                         isActive
-                          ? 'bg-emerald-100 hover:bg-emerald-200'
-                          : 'hover:bg-gray-100'
+                          ? 'bg-sage-100 hover:bg-sage-200'
+                          : 'hover:bg-warm-gray-100'
                       } ${isSaving ? 'opacity-50' : ''}`}
                       onClick={() => togglePediatric(dateStr)}
                     >
                       {isActive && (
                         <div className="flex items-center justify-center">
-                          <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                          <div className="w-2 h-2 rounded-full bg-sage-500" />
                         </div>
                       )}
                     </td>

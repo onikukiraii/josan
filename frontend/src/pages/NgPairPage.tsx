@@ -99,10 +99,10 @@ export function NgPairPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+        <h1 className="text-2xl font-bold tracking-tight text-warm-gray-900">
           NGペア管理
         </h1>
-        <p className="text-sm text-slate-500 mt-1">
+        <p className="text-sm text-warm-gray-500 mt-1">
           同じシフトに入れないメンバーの組み合わせを管理します
         </p>
       </div>
@@ -113,9 +113,9 @@ export function NgPairPage() {
         </Alert>
       )}
 
-      <div className="flex items-end gap-3 rounded-lg border border-slate-200 bg-white p-4">
+      <div className="flex items-end gap-3 rounded-lg border border-warm-gray-200 bg-white p-4">
         <div className="flex-1 space-y-1.5">
-          <label className="text-sm font-medium text-slate-700">メンバー1</label>
+          <label className="text-sm font-medium text-warm-gray-700">メンバー1</label>
           <Select value={member1} onValueChange={setMember1}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder="メンバーを選択" />
@@ -131,7 +131,7 @@ export function NgPairPage() {
         </div>
 
         <div className="flex-1 space-y-1.5">
-          <label className="text-sm font-medium text-slate-700">メンバー2</label>
+          <label className="text-sm font-medium text-warm-gray-700">メンバー2</label>
           <Select
             value={member2}
             onValueChange={setMember2}
@@ -167,14 +167,14 @@ export function NgPairPage() {
           <Skeleton className="h-10 w-full" />
         </div>
       ) : (
-        <div className="rounded-lg border border-slate-200 bg-white">
+        <div className="rounded-lg border border-warm-gray-200 bg-white">
           <Table>
             <TableHeader>
-              <TableRow className="bg-slate-50">
-                <TableHead className="font-semibold text-slate-700">メンバー1</TableHead>
-                <TableHead className="font-semibold text-slate-700">メンバー2</TableHead>
-                <TableHead className="font-semibold text-slate-700">登録日</TableHead>
-                <TableHead className="font-semibold text-slate-700 text-right">アクション</TableHead>
+              <TableRow className="bg-warm-gray-50">
+                <TableHead className="font-semibold text-warm-gray-700">メンバー1</TableHead>
+                <TableHead className="font-semibold text-warm-gray-700">メンバー2</TableHead>
+                <TableHead className="font-semibold text-warm-gray-700">登録日</TableHead>
+                <TableHead className="font-semibold text-warm-gray-700 text-right">アクション</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -182,7 +182,7 @@ export function NgPairPage() {
                 <TableRow>
                   <TableCell
                     colSpan={4}
-                    className="h-24 text-center text-slate-500"
+                    className="h-24 text-center text-warm-gray-500"
                   >
                     NGペアが登録されていません
                   </TableCell>
@@ -190,9 +190,9 @@ export function NgPairPage() {
               ) : (
                 ngPairs.map((pair) => (
                   <TableRow key={pair.id}>
-                    <TableCell className="text-slate-900">{pair.member_name_1}</TableCell>
-                    <TableCell className="text-slate-900">{pair.member_name_2}</TableCell>
-                    <TableCell className="text-slate-600">{formatDate(pair.created_at)}</TableCell>
+                    <TableCell className="text-warm-gray-900">{pair.member_name_1}</TableCell>
+                    <TableCell className="text-warm-gray-900">{pair.member_name_2}</TableCell>
+                    <TableCell className="text-warm-gray-600">{formatDate(pair.created_at)}</TableCell>
                     <TableCell className="text-right">
                       <Button
                         variant="destructive"
@@ -230,7 +230,7 @@ export function NgPairPage() {
             <AlertDialogAction
               onClick={handleDelete}
               disabled={deleting}
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-error hover:bg-error/90"
             >
               {deleting ? '削除中...' : '削除'}
             </AlertDialogAction>
