@@ -1,4 +1,5 @@
 import { Outlet, useLocation, Link } from 'react-router-dom'
+import { Users, UserX, CalendarDays, TableProperties } from 'lucide-react'
 import {
   Sidebar,
   SidebarContent,
@@ -14,12 +15,13 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar'
 import { Separator } from '@/components/ui/separator'
+import type { LucideIcon } from 'lucide-react'
 
-const NAV_ITEMS = [
-  { path: '/members', label: 'メンバー管理', icon: '👤' },
-  { path: '/ng-pairs', label: 'NGペア管理', icon: '🚫' },
-  { path: '/monthly-settings', label: '月次設定', icon: '📅' },
-  { path: '/shift', label: 'シフト表', icon: '📋' },
+const NAV_ITEMS: { path: string; label: string; icon: LucideIcon }[] = [
+  { path: '/members', label: 'メンバー管理', icon: Users },
+  { path: '/ng-pairs', label: 'NGペア管理', icon: UserX },
+  { path: '/monthly-settings', label: '月次設定', icon: CalendarDays },
+  { path: '/shift', label: 'シフト表', icon: TableProperties },
 ]
 
 export function AppLayout() {
@@ -29,15 +31,7 @@ export function AppLayout() {
     <SidebarProvider>
       <Sidebar>
         <SidebarHeader className="p-4">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-sidebar-primary flex items-center justify-center text-sidebar-primary-foreground text-sm font-bold">
-              助
-            </div>
-            <div>
-              <h1 className="text-sm font-bold tracking-tight">シフト管理</h1>
-              <p className="text-[10px] text-sidebar-foreground/60">産婦人科クリニック</p>
-            </div>
-          </div>
+          <img src="/logo.svg" alt="Josan" />
         </SidebarHeader>
         <SidebarContent>
           <SidebarGroup>
@@ -51,7 +45,7 @@ export function AppLayout() {
                       isActive={location.pathname === item.path}
                     >
                       <Link to={item.path}>
-                        <span>{item.icon}</span>
+                        <item.icon className="size-4" />
                         <span>{item.label}</span>
                       </Link>
                     </SidebarMenuButton>

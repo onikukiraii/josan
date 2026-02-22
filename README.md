@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/logo.svg" alt="Josan" width="160" />
+</p>
+
 # Josan - 産婦人科シフト管理アプリ
 
 産婦人科クリニックにおけるスタッフのシフト管理を自動化する Web アプリケーション。
