@@ -34,7 +34,7 @@ STAFFING_REQUIREMENTS: list[StaffingRequirement] = [
     StaffingRequirement(
         shift_type=ShiftType.treatment_room,
         min_staff={DayType.weekday: 1, DayType.saturday: 1, DayType.sunday_holiday: 0},
-        max_staff={DayType.weekday: 5, DayType.saturday: 5, DayType.sunday_holiday: 0},
+        max_staff={DayType.weekday: 1, DayType.saturday: 1, DayType.sunday_holiday: 0},
     ),
     StaffingRequirement(
         shift_type=ShiftType.beauty,
@@ -58,7 +58,7 @@ STAFFING_REQUIREMENTS: list[StaffingRequirement] = [
     StaffingRequirement(
         shift_type=ShiftType.ward,
         min_staff={DayType.weekday: 1, DayType.saturday: 1, DayType.sunday_holiday: 1},
-        max_staff={DayType.weekday: 5, DayType.saturday: 5, DayType.sunday_holiday: 3},
+        max_staff={DayType.weekday: 2, DayType.saturday: 2, DayType.sunday_holiday: 2},
         required_capabilities=[CapabilityType.ward_staff],
         is_ward_family=True,
     ),
@@ -77,6 +77,18 @@ STAFFING_REQUIREMENTS: list[StaffingRequirement] = [
         required_capabilities=[CapabilityType.ward_staff],
         required_qualification=Qualification.midwife,
         is_ward_family=True,
+    ),
+    StaffingRequirement(
+        shift_type=ShiftType.ward_free,
+        min_staff={DayType.weekday: 0, DayType.saturday: 0, DayType.sunday_holiday: 0},
+        max_staff={DayType.weekday: 99, DayType.saturday: 99, DayType.sunday_holiday: 99},
+        required_capabilities=[CapabilityType.ward_staff],
+        is_ward_family=True,
+    ),
+    StaffingRequirement(
+        shift_type=ShiftType.outpatient_free,
+        min_staff={DayType.weekday: 0, DayType.saturday: 0, DayType.sunday_holiday: 0},
+        max_staff={DayType.weekday: 99, DayType.saturday: 99, DayType.sunday_holiday: 0},
     ),
     StaffingRequirement(
         shift_type=ShiftType.night_leader,
@@ -101,11 +113,19 @@ DAY_SHIFT_TYPES = {
     ShiftType.ward,
     ShiftType.delivery,
     ShiftType.delivery_charge,
+    ShiftType.ward_free,
+    ShiftType.outpatient_free,
 }
 
 NIGHT_SHIFT_TYPES = {ShiftType.night_leader, ShiftType.night}
 
-WARD_SHIFT_TYPES = {ShiftType.ward_leader, ShiftType.ward, ShiftType.delivery, ShiftType.delivery_charge}
+WARD_SHIFT_TYPES = {
+    ShiftType.ward_leader,
+    ShiftType.ward,
+    ShiftType.delivery,
+    ShiftType.delivery_charge,
+    ShiftType.ward_free,
+}
 
 ALL_SHIFT_TYPES = list(ShiftType)
 

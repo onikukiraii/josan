@@ -68,6 +68,8 @@ class ShiftType(str, enum.Enum):
     ward = "ward"
     delivery = "delivery"
     delivery_charge = "delivery_charge"
+    ward_free = "ward_free"
+    outpatient_free = "outpatient_free"
     night_leader = "night_leader"
     night = "night"
     day_off = "day_off"
@@ -83,6 +85,8 @@ class ShiftType(str, enum.Enum):
             "ward": "病棟",
             "delivery": "分娩",
             "delivery_charge": "分担",
+            "ward_free": "病棟F",
+            "outpatient_free": "外来F",
             "night_leader": "夜L",
             "night": "夜勤",
             "day_off": "公休",

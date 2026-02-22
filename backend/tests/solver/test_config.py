@@ -65,7 +65,7 @@ class TestGetBaseOffDays:
 
 class TestShiftTypeConstants:
     def test_staffing_requirements_count(self) -> None:
-        assert len(STAFFING_REQUIREMENTS) == 10
+        assert len(STAFFING_REQUIREMENTS) == 12
 
     def test_day_night_disjoint(self) -> None:
         assert DAY_SHIFT_TYPES & NIGHT_SHIFT_TYPES == set()

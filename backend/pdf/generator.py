@@ -20,6 +20,8 @@ SHIFT_TYPE_LABELS: dict[ShiftType, str] = {
     ShiftType.ward: "病棟",
     ShiftType.delivery: "分娩",
     ShiftType.delivery_charge: "分娩担当",
+    ShiftType.ward_free: "病棟F",
+    ShiftType.outpatient_free: "外来F",
     ShiftType.night_leader: "夜勤L",
     ShiftType.night: "夜勤",
 }
@@ -29,10 +31,12 @@ DISPLAY_SHIFT_TYPES = [
     ShiftType.treatment_room,
     ShiftType.beauty,
     ShiftType.mw_outpatient,
+    ShiftType.outpatient_free,
     ShiftType.ward_leader,
     ShiftType.ward,
     ShiftType.delivery,
     ShiftType.delivery_charge,
+    ShiftType.ward_free,
     ShiftType.night_leader,
     ShiftType.night,
 ]
