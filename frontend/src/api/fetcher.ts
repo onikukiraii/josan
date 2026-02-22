@@ -24,7 +24,9 @@ const api = createClient<paths>({ baseUrl: BASE_URL })
 
 function unwrap<T>(result: { data?: T; error?: unknown }): T {
   if (result.error !== undefined) {
-    throw new Error(`API error: ${JSON.stringify(result.error)}`)
+    const err = result.error as Record<string, unknown>
+    const message = typeof err.detail === 'string' ? err.detail : JSON.stringify(result.error)
+    throw new Error(message)
   }
   return result.data as T
 }

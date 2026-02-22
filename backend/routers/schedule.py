@@ -72,7 +72,13 @@ def generate_schedule(params: ScheduleGenerateParams, db: Session = Depends(get_
         db.add(schedule)
         db.flush()
 
-    result_assignments, unfulfilled_raw = generate_shift(db, params.year_month)
+    try:
+        result_assignments, unfulfilled_raw = generate_shift(db, params.year_month)
+    except RuntimeError as e:
+        raise HTTPException(
+            status_code=422,
+            detail=str(e),
+        ) from e
 
     for a in result_assignments:
         db.add(

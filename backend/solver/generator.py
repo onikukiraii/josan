@@ -4,7 +4,7 @@ import logging
 from ortools.sat.python import cp_model
 from sqlalchemy.orm import Session
 
-from entity.enums import CapabilityType, Qualification, ShiftType
+from entity.enums import CapabilityType, EmploymentType, Qualification, ShiftType
 from entity.member import Member
 from entity.member_capability import MemberCapability
 from entity.ng_pair import NgPair
@@ -29,6 +29,7 @@ from solver.constraints import (
     add_staffing_requirements,
     add_sunday_holiday_ward_only,
 )
+from solver.diagnostics import diagnose_infeasibility
 
 logger = logging.getLogger(__name__)
 
@@ -112,6 +113,7 @@ def _add_hard_constraints(
     ng_pairs: list[tuple[int, int]],
     pediatric_dates: set[datetime.date],
     rookie_ids: list[int],
+    part_time_ids: set[int] | None = None,
 ) -> None:
     add_one_shift_per_day(model, x, member_ids, dates)
     add_staffing_requirements(model, x, member_ids, dates, pediatric_dates)
@@ -123,7 +125,7 @@ def _add_hard_constraints(
     add_night_midwife_constraint(model, x, member_ids, dates, member_qualifications)
     add_max_consecutive_work(model, x, member_ids, dates)
     add_night_shift_limit(model, x, member_ids, dates, member_max_nights)
-    add_off_day_count(model, x, member_ids, dates, member_off_days)
+    add_off_day_count(model, x, member_ids, dates, member_off_days, part_time_ids)
     add_sunday_holiday_ward_only(model, x, member_ids, dates)
     if rookie_ids:
         add_rookie_ward_constraint(model, x, member_ids, dates, rookie_ids, member_capabilities)
@@ -140,15 +142,21 @@ def generate_shift(db: Session, year_month: str) -> tuple[list[dict[str, object]
 
     rookie_ids = [m for m in member_ids if CapabilityType.rookie in member_capabilities.get(m, set())]
 
+    part_time_ids = {m.id for m in members if m.employment_type == EmploymentType.part_time}
+
     member_off_days: dict[int, int] = {}
     base_off = get_base_off_days(len(dates))
     for m in members:
-        off = base_off
-        balance = m.night_shift_deduction_balance
-        estimated_nights = m.max_night_shifts
-        if balance + estimated_nights >= 8:
-            off -= 1
-        member_off_days[m.id] = off
+        if m.id in part_time_ids:
+            # 非常勤: 夜勤上限分だけ出勤し、残りは全て公休
+            member_off_days[m.id] = len(dates) - m.max_night_shifts
+        else:
+            off = base_off
+            balance = m.night_shift_deduction_balance
+            estimated_nights = m.max_night_shifts
+            if balance + estimated_nights >= 8:
+                off -= 1
+            member_off_days[m.id] = off
 
     # Step 1: 希望休をハード制約
     model = cp_model.CpModel()
@@ -165,6 +173,7 @@ def generate_shift(db: Session, year_month: str) -> tuple[list[dict[str, object]
         ng_pairs,
         pediatric_dates,
         rookie_ids,
+        part_time_ids,
     )
     add_shift_request_hard(model, x, request_map)
 
@@ -195,6 +204,7 @@ def generate_shift(db: Session, year_month: str) -> tuple[list[dict[str, object]
             ng_pairs,
             pediatric_dates,
             rookie_ids,
+            part_time_ids,
         )
 
         fulfilled_vars = add_shift_request_soft(model, x, request_map)
@@ -208,7 +218,24 @@ def generate_shift(db: Session, year_month: str) -> tuple[list[dict[str, object]
         status = solver.solve(model)
 
         if status not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
-            raise RuntimeError("Solver could not find a feasible solution")
+            member_name_map = {m.id: m.name for m in members}
+            problems = diagnose_infeasibility(
+                member_ids,
+                member_name_map,
+                member_capabilities,
+                member_qualifications,
+                member_max_nights,
+                member_off_days,
+                dates,
+            )
+            if problems:
+                detail = "以下の問題が見つかりました:\n" + "\n".join(f"・{p}" for p in problems)
+            else:
+                detail = (
+                    "制約条件を満たすシフトの組み合わせが見つかりませんでした。"
+                    "メンバー数や希望休、NGペアの設定を見直してください。"
+                )
+            raise RuntimeError(detail)
 
         # Step 3: 叶えられなかった希望休を特定
         member_name_map = {m.id: m.name for m in members}
