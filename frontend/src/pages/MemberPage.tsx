@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { toast } from 'sonner'
 import { membersApi } from '@/api/fetcher'
 import type {
   MemberResponse,
@@ -11,6 +12,7 @@ import {
   QUALIFICATION_LABEL,
   EMPLOYMENT_TYPE_LABEL,
   CAPABILITY_LABEL,
+  compareMemberForDisplay,
 } from '@/api/constants'
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -30,7 +32,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
-import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
 
 const ALL_CAPABILITIES: CapabilityType[] = [
@@ -68,21 +69,24 @@ const INITIAL_FORM: FormState = {
 export function MemberPage() {
   const [members, setMembers] = useState<MemberResponse[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingMember, setEditingMember] = useState<MemberResponse | null>(null)
   const [form, setForm] = useState<FormState>(INITIAL_FORM)
   const [submitting, setSubmitting] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<MemberResponse | null>(null)
 
+  const sortedMembers = useMemo(
+    () => [...members].sort(compareMemberForDisplay),
+    [members],
+  )
+
   const fetchMembers = useCallback(async () => {
     try {
       setLoading(true)
-      setError(null)
       const data = await membersApi.list()
       setMembers(data)
     } catch (e) {
-      setError(e instanceof Error ? e.message : '読み込みに失敗しました')
+      toast.error(e instanceof Error ? e.message : '読み込みに失敗しました')
     } finally {
       setLoading(false)
     }
@@ -115,7 +119,6 @@ export function MemberPage() {
 
     try {
       setSubmitting(true)
-      setError(null)
 
       const params: MemberCreateParams = {
         name: form.name.trim(),
@@ -132,9 +135,10 @@ export function MemberPage() {
       }
 
       setDialogOpen(false)
+      toast.success(editingMember ? 'メンバーを更新しました' : 'メンバーを登録しました')
       await fetchMembers()
     } catch (e) {
-      setError(e instanceof Error ? e.message : '保存に失敗しました')
+      toast.error(e instanceof Error ? e.message : '保存に失敗しました')
     } finally {
       setSubmitting(false)
     }
@@ -144,19 +148,18 @@ export function MemberPage() {
     if (!deleteTarget) return
 
     try {
-      setError(null)
       await membersApi.delete(deleteTarget.id)
       setDeleteTarget(null)
+      toast.success('メンバーを削除しました')
       await fetchMembers()
     } catch (e) {
-      setError(e instanceof Error ? e.message : '削除に失敗しました')
+      toast.error(e instanceof Error ? e.message : '削除に失敗しました')
       setDeleteTarget(null)
     }
   }, [deleteTarget, fetchMembers])
 
   const handleCopy = useCallback(async (member: MemberResponse) => {
     try {
-      setError(null)
       await membersApi.create({
         name: `${member.name}（コピー）`,
         qualification: member.qualification,
@@ -164,9 +167,10 @@ export function MemberPage() {
         max_night_shifts: member.max_night_shifts,
         capabilities: [...member.capabilities],
       })
+      toast.success('メンバーをコピーしました')
       await fetchMembers()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'コピーに失敗しました')
+      toast.error(e instanceof Error ? e.message : 'コピーに失敗しました')
     }
   }, [fetchMembers])
 
@@ -190,22 +194,16 @@ export function MemberPage() {
             スタッフの登録・編集・削除を行います
           </p>
         </div>
-        <Button onClick={openCreateDialog} className="bg-brand-600 hover:bg-brand-700">
+        <Button onClick={openCreateDialog} className="bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 shadow-sm">
           新規登録
         </Button>
       </div>
 
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
       {loading ? (
-        <div className="rounded-lg border">
+        <div className="rounded-2xl border-0 soft-shadow-md bg-white">
           <Table>
             <TableHeader>
-              <TableRow>
+              <TableRow className="bg-brand-50/60">
                 <TableHead className="w-[140px]">名前</TableHead>
                 <TableHead className="w-[100px]">職能</TableHead>
                 <TableHead className="w-[100px]">雇用形態</TableHead>
@@ -234,29 +232,29 @@ export function MemberPage() {
             </TableBody>
           </Table>
         </div>
-      ) : members.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16 text-warm-gray-500">
+      ) : sortedMembers.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-2xl bg-brand-50/30 py-16 text-warm-gray-500 animate-in fade-in">
           <p className="text-lg font-medium">メンバーが登録されていません</p>
           <p className="mt-1 text-sm">「新規登録」ボタンからスタッフを追加してください</p>
         </div>
       ) : (
-        <div className="rounded-lg border shadow-sm">
+        <div className="rounded-2xl border-0 soft-shadow-md bg-white animate-in fade-in">
           <Table>
             <TableHeader>
-              <TableRow className="bg-warm-gray-50/80">
-                <TableHead className="w-[140px] font-semibold text-warm-gray-700">名前</TableHead>
-                <TableHead className="w-[100px] font-semibold text-warm-gray-700">職能</TableHead>
-                <TableHead className="w-[100px] font-semibold text-warm-gray-700">雇用形態</TableHead>
-                <TableHead className="w-[100px] font-semibold text-warm-gray-700">夜勤上限</TableHead>
-                <TableHead className="font-semibold text-warm-gray-700">能力</TableHead>
-                <TableHead className="w-[180px] text-right font-semibold text-warm-gray-700">アクション</TableHead>
+              <TableRow className="bg-brand-50/60">
+                <TableHead className="w-[140px] font-semibold text-brand-800">名前</TableHead>
+                <TableHead className="w-[100px] font-semibold text-brand-800">職能</TableHead>
+                <TableHead className="w-[100px] font-semibold text-brand-800">雇用形態</TableHead>
+                <TableHead className="w-[100px] font-semibold text-brand-800">夜勤上限</TableHead>
+                <TableHead className="font-semibold text-brand-800">能力</TableHead>
+                <TableHead className="w-[180px] text-right font-semibold text-brand-800">アクション</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {members.map(member => (
+              {sortedMembers.map(member => (
                 <TableRow
                   key={member.id}
-                  className="transition-colors hover:bg-brand-50/50"
+                  className="transition-colors hover:bg-brand-50/30"
                 >
                   <TableCell className="font-medium text-warm-gray-900">
                     {member.name}
@@ -276,7 +274,7 @@ export function MemberPage() {
                         <Badge
                           key={cap}
                           variant="secondary"
-                          className="bg-brand-50 text-xs text-brand-700 hover:bg-brand-100"
+                          className="bg-brand-100/80 text-xs text-brand-700 hover:bg-brand-100 rounded-full"
                         >
                           {CAPABILITY_LABEL[cap]}
                         </Badge>
@@ -289,7 +287,7 @@ export function MemberPage() {
                         variant="ghost"
                         size="sm"
                         onClick={() => openEditDialog(member)}
-                        className="text-warm-gray-600 hover:text-brand-600"
+                        className="text-warm-gray-600 hover:text-brand-600 hover:bg-brand-50"
                       >
                         編集
                       </Button>
@@ -297,7 +295,7 @@ export function MemberPage() {
                         variant="ghost"
                         size="sm"
                         onClick={() => handleCopy(member)}
-                        className="text-warm-gray-600 hover:text-brand-600"
+                        className="text-warm-gray-600 hover:text-brand-600 hover:bg-brand-50"
                       >
                         コピー
                       </Button>
@@ -323,7 +321,7 @@ export function MemberPage() {
       </p>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-lg rounded-2xl">
           <DialogHeader>
             <DialogTitle className="text-warm-gray-900">
               {editingMember ? 'メンバー編集' : 'メンバー新規登録'}
@@ -411,7 +409,7 @@ export function MemberPage() {
 
             <div className="space-y-3">
               <Label className="text-warm-gray-700">能力</Label>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-4">
                 {ALL_CAPABILITIES.map(cap => (
                   <div key={cap} className="flex items-center space-x-2">
                     <Checkbox
@@ -443,7 +441,7 @@ export function MemberPage() {
             <Button
               onClick={handleSubmit}
               disabled={submitting || !form.name.trim()}
-              className="bg-brand-600 hover:bg-brand-700"
+              className="bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 shadow-sm"
             >
               {submitting ? '保存中...' : editingMember ? '更新' : '登録'}
             </Button>

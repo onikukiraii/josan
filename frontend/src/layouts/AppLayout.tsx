@@ -30,7 +30,7 @@ export function AppLayout() {
   return (
     <SidebarProvider>
       <Sidebar>
-        <SidebarHeader className="p-4">
+        <SidebarHeader className="p-6">
           <img src="/logo.svg" alt="Josan" />
         </SidebarHeader>
         <SidebarContent>
@@ -43,6 +43,7 @@ export function AppLayout() {
                     <SidebarMenuButton
                       asChild
                       isActive={location.pathname === item.path}
+                      className={location.pathname === item.path ? 'bg-brand-100 text-brand-800 font-semibold border-l-3 border-brand-500' : 'hover:bg-brand-100 hover:text-brand-700'}
                     >
                       <Link to={item.path}>
                         <item.icon className="size-4" />
@@ -57,14 +58,14 @@ export function AppLayout() {
         </SidebarContent>
       </Sidebar>
       <SidebarInset>
-        <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
+        <header className="flex h-12 shrink-0 items-center gap-2 px-4 bg-white/80 backdrop-blur-sm soft-shadow">
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="mr-2 h-4" />
           <span className="text-sm font-medium text-muted-foreground">
             {NAV_ITEMS.find((item) => item.path === location.pathname)?.label}
           </span>
         </header>
-        <main className="flex-1 p-6 overflow-auto">
+        <main className="flex-1 p-8 overflow-auto">
           <Outlet />
         </main>
       </SidebarInset>

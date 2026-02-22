@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { toast } from 'sonner'
 import { membersApi } from '@/api/fetcher'
 import { shiftRequestsApi } from '@/api/fetcher'
 import { pediatricApi } from '@/api/fetcher'
@@ -59,6 +60,8 @@ export function MonthlySettingsPage() {
       setRequestMap(map)
 
       setPediatricDates(new Set(pediatricData.map((p) => p.date)))
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'データの取得に失敗しました')
     } finally {
       setLoading(false)
     }
@@ -93,7 +96,8 @@ export function MonthlySettingsPage() {
           year_month: yearMonth,
           dates: Array.from(currentSet).sort(),
         })
-      } catch {
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : '希望休の更新に失敗しました')
         setRequestMap((prev) => {
           const reverted = new Set(currentSet)
           if (reverted.has(dateStr)) {
@@ -136,7 +140,8 @@ export function MonthlySettingsPage() {
           year_month: yearMonth,
           dates: Array.from(currentSet).sort(),
         })
-      } catch {
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : '小児科医スケジュールの更新に失敗しました')
         setPediatricDates((prev) => {
           const reverted = new Set(prev)
           if (reverted.has(dateStr)) {
@@ -198,7 +203,7 @@ export function MonthlySettingsPage() {
   return (
     <div className="space-y-8 p-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold tracking-tight text-warm-gray-900">月次設定</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-warm-gray-900">月次設定</h1>
         <YearMonthPicker value={yearMonth} onChange={setYearMonth} />
       </div>
 
@@ -217,11 +222,11 @@ export function MonthlySettingsPage() {
           </Alert>
         )}
 
-        <div className="overflow-x-auto rounded-md border border-warm-gray-200">
+        <div className="overflow-x-auto rounded-2xl soft-shadow-md bg-white">
           <table className="border-collapse text-xs">
             <thead>
               <tr>
-                <th className="sticky left-0 z-10 bg-warm-gray-50 border-b border-r border-warm-gray-200 px-3 py-2 text-left font-medium text-warm-gray-700 min-w-[100px]">
+                <th className="sticky left-0 z-10 bg-brand-50/60 border-b border-r border-warm-gray-200 px-3 py-2 text-left font-medium text-brand-800 min-w-[100px]">
                   スタッフ
                 </th>
                 {dates.map((date) => {
@@ -244,7 +249,7 @@ export function MonthlySettingsPage() {
               {members.map((member) => {
                 const memberDates = requestMap.get(member.id) ?? new Set()
                 return (
-                  <tr key={member.id} className="hover:bg-warm-gray-50/50">
+                  <tr key={member.id} className="hover:bg-brand-50/30">
                     <td className="sticky left-0 z-10 bg-white border-b border-r border-warm-gray-200 px-3 py-1.5 font-medium text-warm-gray-700 whitespace-nowrap">
                       <div className="flex items-center gap-1.5">
                         <span>{member.name}</span>
@@ -286,11 +291,11 @@ export function MonthlySettingsPage() {
       <section className="space-y-4">
         <h2 className="text-base font-semibold text-warm-gray-800">小児科医スケジュール</h2>
 
-        <div className="overflow-x-auto rounded-md border border-warm-gray-200">
+        <div className="overflow-x-auto rounded-2xl soft-shadow-md bg-white">
           <table className="border-collapse text-xs">
             <thead>
               <tr>
-                <th className="sticky left-0 z-10 bg-warm-gray-50 border-b border-r border-warm-gray-200 px-3 py-2 text-left font-medium text-warm-gray-700 min-w-[100px]">
+                <th className="sticky left-0 z-10 bg-brand-50/60 border-b border-r border-warm-gray-200 px-3 py-2 text-left font-medium text-brand-800 min-w-[100px]">
                   日付
                 </th>
                 {dates.map((date) => {
@@ -310,7 +315,7 @@ export function MonthlySettingsPage() {
               </tr>
             </thead>
             <tbody>
-              <tr className="hover:bg-warm-gray-50/50">
+              <tr className="hover:bg-brand-50/30">
                 <td className="sticky left-0 z-10 bg-white border-b border-r border-warm-gray-200 px-3 py-1.5 font-medium text-warm-gray-700 whitespace-nowrap">
                   小児科医
                 </td>

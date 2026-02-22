@@ -146,6 +146,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/schedules/{schedule_id}/assignments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Assignment */
+        post: operations["create_assignment_schedules__schedule_id__assignments_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/schedules/{schedule_id}/assignments/{assignment_id}": {
         parameters: {
             query?: never;
@@ -157,7 +174,8 @@ export interface paths {
         /** Update Assignment */
         put: operations["update_assignment_schedules__schedule_id__assignments__assignment_id__put"];
         post?: never;
-        delete?: never;
+        /** Delete Assignment */
+        delete: operations["delete_assignment_schedules__schedule_id__assignments__assignment_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -275,6 +293,8 @@ export interface components {
             member_id: number;
             /** メンバー名 */
             member_name: string;
+            /** 雇用形態 */
+            employment_type: components["schemas"]["EmploymentType"];
             /** 勤務日数 */
             working_days: number;
             /** 公休数 */
@@ -287,6 +307,8 @@ export interface components {
             request_fulfilled: number;
             /** 希望休合計 */
             request_total: number;
+            /** 希望休日付 */
+            request_dates: string[];
         };
         /** MemberUpdateParams */
         MemberUpdateParams: {
@@ -390,8 +412,18 @@ export interface components {
             schedule_id: number;
             /** 年月 */
             year_month: string;
+            /** 基準勤務日数 */
+            expected_working_days: number;
             /** メンバーサマリー */
             members: components["schemas"]["MemberSummary"][];
+        };
+        /** ShiftAssignmentCreateParams */
+        ShiftAssignmentCreateParams: {
+            /** Date */
+            date: string;
+            shift_type: components["schemas"]["ShiftType"];
+            /** Member Id */
+            member_id: number;
         };
         /** ShiftAssignmentResponse */
         ShiftAssignmentResponse: {
@@ -415,6 +447,13 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+        };
+        /** ShiftAssignmentResult */
+        ShiftAssignmentResult: {
+            /** シフト割当 */
+            assignment: components["schemas"]["ShiftAssignmentResponse"];
+            /** 警告メッセージ */
+            warnings?: string[];
         };
         /** ShiftAssignmentUpdateParams */
         ShiftAssignmentUpdateParams: {
@@ -456,7 +495,7 @@ export interface components {
          * ShiftType
          * @enum {string}
          */
-        ShiftType: "outpatient_leader" | "treatment_room" | "beauty" | "mw_outpatient" | "ward_leader" | "ward" | "delivery" | "delivery_charge" | "night_leader" | "night" | "day_off";
+        ShiftType: "outpatient_leader" | "treatment_room" | "beauty" | "mw_outpatient" | "ward_leader" | "ward" | "delivery" | "delivery_charge" | "ward_free" | "outpatient_free" | "night_leader" | "night" | "day_off";
         /** UnfulfilledRequest */
         UnfulfilledRequest: {
             /** メンバーID */
@@ -917,6 +956,41 @@ export interface operations {
             };
         };
     };
+    create_assignment_schedules__schedule_id__assignments_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                schedule_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShiftAssignmentCreateParams"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShiftAssignmentResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     update_assignment_schedules__schedule_id__assignments__assignment_id__put: {
         parameters: {
             query?: never;
@@ -939,8 +1013,38 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ShiftAssignmentResponse"];
+                    "application/json": components["schemas"]["ShiftAssignmentResult"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_assignment_schedules__schedule_id__assignments__assignment_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                schedule_id: number;
+                assignment_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

@@ -13,6 +13,8 @@ import type {
   ScheduleResponse,
   GenerateResponse,
   ShiftAssignmentResponse,
+  ShiftAssignmentResult,
+  ShiftAssignmentCreateParams,
   ShiftAssignmentUpdateParams,
   ScheduleSummaryResponse,
   ScheduleGenerateParams,
@@ -135,6 +137,19 @@ export const schedulesApi = {
     })
     return unwrap<GenerateResponse>(res)
   },
+  createAssignment: async (
+    scheduleId: number,
+    params: ShiftAssignmentCreateParams,
+  ) => {
+    const res = await api.POST(
+      '/schedules/{schedule_id}/assignments',
+      {
+        params: { path: { schedule_id: scheduleId } },
+        body: params,
+      },
+    )
+    return unwrap<ShiftAssignmentResult>(res)
+  },
   updateAssignment: async (
     scheduleId: number,
     assignmentId: number,
@@ -147,7 +162,16 @@ export const schedulesApi = {
         body: params,
       },
     )
-    return unwrap<ShiftAssignmentResponse>(res)
+    return unwrap<ShiftAssignmentResult>(res)
+  },
+  deleteAssignment: async (scheduleId: number, assignmentId: number) => {
+    const res = await api.DELETE(
+      '/schedules/{schedule_id}/assignments/{assignment_id}',
+      {
+        params: { path: { schedule_id: scheduleId, assignment_id: assignmentId } },
+      },
+    )
+    unwrap(res)
   },
   summary: async (scheduleId: number) => {
     const res = await api.GET('/schedules/{schedule_id}/summary', {

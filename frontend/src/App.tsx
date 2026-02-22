@@ -4,6 +4,7 @@ import { MemberPage } from '@/pages/MemberPage'
 import { NgPairPage } from '@/pages/NgPairPage'
 import { MonthlySettingsPage } from '@/pages/MonthlySettingsPage'
 import { ShiftPage } from '@/pages/ShiftPage'
+import { Toaster } from '@/components/ui/sonner'
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
           <Route path="/shift" element={<ShiftPage />} />
         </Route>
       </Routes>
+      <Toaster />
     </BrowserRouter>
   )
 }

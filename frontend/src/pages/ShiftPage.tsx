@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { toast } from 'sonner'
 import { membersApi, schedulesApi } from '@/api/fetcher'
 import type {
   MemberResponse,
@@ -18,7 +19,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -29,10 +30,12 @@ const DISPLAY_SHIFT_TYPES: ShiftType[] = [
   'treatment_room',
   'beauty',
   'mw_outpatient',
+  'outpatient_free',
   'ward_leader',
   'ward',
   'delivery',
   'delivery_charge',
+  'ward_free',
   'night_leader',
   'night',
 ]
@@ -50,6 +53,8 @@ const SHIFT_TYPE_TO_CAPABILITY: Partial<Record<ShiftType, string>> = {
   treatment_room: 'day_shift',
   delivery: 'day_shift',
   delivery_charge: 'day_shift',
+  ward_free: 'ward_staff',
+  outpatient_free: 'day_shift',
 }
 
 function getMonthDates(yearMonth: string): Date[] {
@@ -100,12 +105,10 @@ export function ShiftPage() {
   const [unfulfilled, setUnfulfilled] = useState<UnfulfilledRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
   const fetchData = useCallback(async (ym: string) => {
     try {
       setLoading(true)
-      setError(null)
       const [scheduleData, membersData] = await Promise.all([
         schedulesApi.get(ym),
         membersApi.list(),
@@ -120,7 +123,7 @@ export function ShiftPage() {
         setSummary(null)
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'データの取得に失敗しました')
+      toast.error(e instanceof Error ? e.message : 'データの取得に失敗しました')
     } finally {
       setLoading(false)
     }
@@ -133,7 +136,6 @@ export function ShiftPage() {
   const handleGenerate = useCallback(async () => {
     try {
       setGenerating(true)
-      setError(null)
       const result: GenerateResponse = await schedulesApi.generate({ year_month: yearMonth })
       setSchedule(result.schedule)
       setUnfulfilled(result.unfulfilled_requests)
@@ -141,8 +143,9 @@ export function ShiftPage() {
         const summaryData = await schedulesApi.summary(result.schedule.id)
         setSummary(summaryData)
       }
+      toast.success('シフトを生成しました')
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'シフト生成に失敗しました')
+      toast.error(e instanceof Error ? e.message : 'シフト生成に失敗しました')
     } finally {
       setGenerating(false)
     }
@@ -160,8 +163,7 @@ export function ShiftPage() {
   ) => {
     if (!schedule) return
     try {
-      setError(null)
-      const updated = await schedulesApi.updateAssignment(schedule.id, assignmentId, {
+      const result = await schedulesApi.updateAssignment(schedule.id, assignmentId, {
         shift_type: shiftType,
         member_id: memberId,
       })
@@ -170,14 +172,64 @@ export function ShiftPage() {
         return {
           ...prev,
           assignments: prev.assignments.map((a) =>
-            a.id === updated.id ? updated : a,
+            a.id === result.assignment.id ? result.assignment : a,
           ),
+        }
+      })
+      for (const w of result.warnings) {
+        toast.warning(w)
+      }
+      const summaryData = await schedulesApi.summary(schedule.id)
+      setSummary(summaryData)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'シフトの更新に失敗しました')
+    }
+  }, [schedule])
+
+  const handleAssignmentDelete = useCallback(async (assignmentId: number) => {
+    if (!schedule) return
+    try {
+      await schedulesApi.deleteAssignment(schedule.id, assignmentId)
+      setSchedule((prev) => {
+        if (!prev) return prev
+        return {
+          ...prev,
+          assignments: prev.assignments.filter((a) => a.id !== assignmentId),
         }
       })
       const summaryData = await schedulesApi.summary(schedule.id)
       setSummary(summaryData)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'シフトの更新に失敗しました')
+      toast.error(e instanceof Error ? e.message : 'シフトの削除に失敗しました')
+    }
+  }, [schedule])
+
+  const handleAssignmentCreate = useCallback(async (
+    dateStr: string,
+    shiftType: ShiftType,
+    memberId: number,
+  ) => {
+    if (!schedule) return
+    try {
+      const result = await schedulesApi.createAssignment(schedule.id, {
+        date: dateStr,
+        shift_type: shiftType,
+        member_id: memberId,
+      })
+      setSchedule((prev) => {
+        if (!prev) return prev
+        return {
+          ...prev,
+          assignments: [...prev.assignments, result.assignment],
+        }
+      })
+      for (const w of result.warnings) {
+        toast.warning(w)
+      }
+      const summaryData = await schedulesApi.summary(schedule.id)
+      setSummary(summaryData)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'シフトの追加に失敗しました')
     }
   }, [schedule])
 
@@ -198,17 +250,18 @@ export function ShiftPage() {
         <h1 className="text-2xl font-bold tracking-tight text-warm-gray-900">
           シフト表
         </h1>
-        <p className="text-sm text-warm-gray-500 mt-1">
+        <p className="text-sm text-warm-gray-400 mt-1">
           生成されたシフトスケジュールの確認・編集を行います
         </p>
       </div>
 
-      <div className="flex items-center gap-3 rounded-lg border border-warm-gray-200 bg-white p-4">
+      <div className="flex items-center gap-3 rounded-2xl border-0 soft-shadow-md bg-white p-4">
         <YearMonthPicker value={yearMonth} onChange={handleYearMonthChange} />
         <div className="flex-1" />
         <Button
           onClick={handleGenerate}
           disabled={generating}
+          className="bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 shadow-sm"
         >
           {generating ? '生成中...' : '生成'}
         </Button>
@@ -220,12 +273,6 @@ export function ShiftPage() {
           PDF出力
         </Button>
       </div>
-
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription className="whitespace-pre-line">{error}</AlertDescription>
-        </Alert>
-      )}
 
       {unfulfilled.length > 0 && (
         <Alert>
@@ -255,19 +302,19 @@ export function ShiftPage() {
         </div>
       ) : schedule ? (
         <>
-          <div className="rounded-lg border border-warm-gray-200 bg-white">
+          <div className="rounded-2xl border-0 soft-shadow-md bg-white">
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-warm-gray-50">
-                    <TableHead className="sticky left-0 z-10 bg-warm-gray-50 font-semibold text-warm-gray-700 min-w-16">
+                  <TableRow className="bg-brand-50/60">
+                    <TableHead className="sticky left-0 z-10 bg-brand-50/60 font-semibold text-brand-800 min-w-16">
                       日付
                     </TableHead>
                     {DISPLAY_SHIFT_TYPES.map((st) => (
                       <TableHead
                         key={st}
-                        className={`font-semibold text-warm-gray-700 text-center min-w-20 ${
-                          NIGHT_SHIFT_TYPES.includes(st) ? 'bg-warm-gray-200' : ''
+                        className={`font-semibold text-brand-800 text-center min-w-20 ${
+                          NIGHT_SHIFT_TYPES.includes(st) ? 'bg-brand-100/40' : ''
                         }`}
                       >
                         {SHIFT_TYPE_LABEL[st]}
@@ -309,7 +356,7 @@ export function ShiftPage() {
                           if (isNight) {
                             if (isSunday) cellBg = 'bg-sunday-bg'
                             else if (isSaturday) cellBg = 'bg-saturday-bg'
-                            else cellBg = 'bg-warm-gray-100'
+                            else cellBg = 'bg-brand-50/20'
                           }
 
                           return (
@@ -317,39 +364,71 @@ export function ShiftPage() {
                               key={st}
                               className={`text-center p-1 ${cellBg}`}
                             >
-                              {cellAssignments.length > 0 ? (
-                                <div className="space-y-0.5">
-                                  {cellAssignments.map((assignment) => (
-                                    <DropdownMenu key={assignment.id}>
-                                      <DropdownMenuTrigger asChild>
-                                        <button
-                                          type="button"
-                                          className="w-full px-1 py-0.5 rounded text-xs cursor-pointer hover:bg-warm-gray-200/60 transition-colors text-warm-gray-900 font-medium max-w-16 truncate block mx-auto"
+                              <div className="space-y-0.5">
+                                {cellAssignments.map((assignment) => (
+                                  <DropdownMenu key={assignment.id}>
+                                    <DropdownMenuTrigger asChild>
+                                      <button
+                                        type="button"
+                                        className="w-full px-1 py-0.5 rounded text-xs cursor-pointer hover:bg-brand-50 transition-colors text-warm-gray-900 font-medium max-w-16 truncate block mx-auto"
+                                      >
+                                        {assignment.member_name}
+                                      </button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="start" className="max-h-64 overflow-y-auto">
+                                      <DropdownMenuItem
+                                        onClick={() => handleAssignmentDelete(assignment.id)}
+                                        className="text-warm-gray-400"
+                                      >
+                                        割当なし
+                                      </DropdownMenuItem>
+                                      <DropdownMenuSeparator />
+                                      {filteredMembers.map((m) => (
+                                        <DropdownMenuItem
+                                          key={m.id}
+                                          onClick={() => handleAssignmentUpdate(assignment.id, st, m.id)}
                                         >
-                                          {assignment.member_name}
-                                        </button>
-                                      </DropdownMenuTrigger>
-                                      <DropdownMenuContent align="start" className="max-h-64 overflow-y-auto">
-                                        {filteredMembers.map((m) => (
-                                          <DropdownMenuItem
-                                            key={m.id}
-                                            onClick={() => handleAssignmentUpdate(assignment.id, st, m.id)}
-                                          >
-                                            {m.name}
-                                          </DropdownMenuItem>
-                                        ))}
-                                        {filteredMembers.length === 0 && (
-                                          <DropdownMenuItem disabled>
-                                            該当メンバーなし
-                                          </DropdownMenuItem>
-                                        )}
-                                      </DropdownMenuContent>
-                                    </DropdownMenu>
-                                  ))}
-                                </div>
-                              ) : (
-                                <span className="text-xs text-warm-gray-400">—</span>
-                              )}
+                                          {m.name}
+                                        </DropdownMenuItem>
+                                      ))}
+                                      {filteredMembers.length === 0 && (
+                                        <DropdownMenuItem disabled>
+                                          該当メンバーなし
+                                        </DropdownMenuItem>
+                                      )}
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                ))}
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <button
+                                      type="button"
+                                      className={`w-full px-1 py-0.5 rounded text-xs cursor-pointer hover:bg-brand-50 transition-colors block mx-auto ${
+                                        cellAssignments.length > 0
+                                          ? 'text-warm-gray-300 hover:text-warm-gray-500'
+                                          : 'text-warm-gray-400'
+                                      }`}
+                                    >
+                                      {cellAssignments.length > 0 ? '+' : '—'}
+                                    </button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="start" className="max-h-64 overflow-y-auto">
+                                    {filteredMembers.map((m) => (
+                                      <DropdownMenuItem
+                                        key={m.id}
+                                        onClick={() => handleAssignmentCreate(dateStr, st, m.id)}
+                                      >
+                                        {m.name}
+                                      </DropdownMenuItem>
+                                    ))}
+                                    {filteredMembers.length === 0 && (
+                                      <DropdownMenuItem disabled>
+                                        該当メンバーなし
+                                      </DropdownMenuItem>
+                                    )}
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </div>
                             </TableCell>
                           )
                         })}
@@ -362,49 +441,101 @@ export function ShiftPage() {
           </div>
 
           {summary && (
-            <div className="rounded-lg border border-warm-gray-200 bg-white">
-              <div className="p-4 border-b border-warm-gray-200 bg-warm-gray-50">
+            <div className="rounded-2xl border-0 soft-shadow-md bg-white">
+              <div className="p-4 border-b border-brand-100 bg-brand-50/40">
                 <h2 className="text-lg font-semibold text-warm-gray-900">
                   サマリー
                 </h2>
+                <p className="text-xs text-warm-gray-400 mt-1">
+                  基準勤務日数: {summary.expected_working_days}日
+                </p>
               </div>
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-warm-gray-50">
-                      <TableHead className="font-semibold text-warm-gray-700">メンバー</TableHead>
-                      <TableHead className="font-semibold text-warm-gray-700 text-center">勤務日数</TableHead>
-                      <TableHead className="font-semibold text-warm-gray-700 text-center">公休</TableHead>
-                      <TableHead className="font-semibold text-warm-gray-700 text-center">夜勤回数</TableHead>
-                      <TableHead className="font-semibold text-warm-gray-700 text-center">日祝出勤</TableHead>
-                      <TableHead className="font-semibold text-warm-gray-700 text-center">希望休</TableHead>
+                    <TableRow className="bg-brand-50/60">
+                      <TableHead className="font-semibold text-brand-800">メンバー</TableHead>
+                      <TableHead className="font-semibold text-brand-800 text-center">勤務日数</TableHead>
+                      <TableHead className="font-semibold text-brand-800 text-center">公休</TableHead>
+                      <TableHead className="font-semibold text-brand-800 text-center">夜勤回数</TableHead>
+                      <TableHead className="font-semibold text-brand-800 text-center">日祝出勤</TableHead>
+                      <TableHead className="font-semibold text-brand-800 text-center">希望休</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {summary.members.map((ms: MemberSummary) => (
-                      <TableRow key={ms.member_id}>
-                        <TableCell className="font-medium text-warm-gray-900">
-                          {ms.member_name}
-                        </TableCell>
-                        <TableCell className="text-center text-warm-gray-700">
-                          {ms.working_days}
-                        </TableCell>
-                        <TableCell className="text-center text-warm-gray-700">
-                          {ms.day_off_count}
-                        </TableCell>
-                        <TableCell className="text-center text-warm-gray-700">
-                          {ms.night_shift_count}
-                        </TableCell>
-                        <TableCell className="text-center text-warm-gray-700">
-                          {ms.holiday_work_count}
-                        </TableCell>
-                        <TableCell className="text-center text-warm-gray-700">
-                          <span className={ms.request_fulfilled < ms.request_total ? 'text-warning font-medium' : ''}>
-                            {ms.request_fulfilled}/{ms.request_total}
-                          </span>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {summary.members.map((ms: MemberSummary) => {
+                      const isFullTime = ms.employment_type === 'full_time'
+                      const workingDaysShort = isFullTime && ms.working_days < summary.expected_working_days
+                      const requestUnfulfilled = ms.request_fulfilled < ms.request_total
+
+                      // Build set of day-off dates for this member
+                      const dayOffDates = new Set(
+                        schedule?.assignments
+                          .filter((a) => a.member_id === ms.member_id && a.shift_type === 'day_off')
+                          .map((a) => a.date) ?? [],
+                      )
+
+                      const hasIssue = workingDaysShort || requestUnfulfilled
+
+                      return (
+                        <TableRow
+                          key={ms.member_id}
+                          className={hasIssue ? 'bg-warning-bg/50 hover:bg-warning-bg/70' : 'hover:bg-brand-50/30'}
+                        >
+                          <TableCell className="font-medium">
+                            <span className={hasIssue ? 'text-warning' : 'text-warm-gray-900'}>
+                              {ms.member_name}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <span className={workingDaysShort ? 'text-warning font-medium' : 'text-warm-gray-700'}>
+                              {ms.working_days}
+                              {workingDaysShort && (
+                                <span className="text-[10px] ml-0.5">
+                                  (-{summary.expected_working_days - ms.working_days})
+                                </span>
+                              )}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-center text-warm-gray-700">
+                            {ms.day_off_count}
+                          </TableCell>
+                          <TableCell className="text-center text-warm-gray-700">
+                            {ms.night_shift_count}
+                          </TableCell>
+                          <TableCell className="text-center text-warm-gray-700">
+                            {ms.holiday_work_count}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <div>
+                              <span className={requestUnfulfilled ? 'text-warning font-medium' : 'text-warm-gray-700'}>
+                                {ms.request_fulfilled}/{ms.request_total}
+                              </span>
+                              {ms.request_dates.length > 0 && (
+                                <div className="flex flex-wrap justify-center gap-0.5 mt-0.5">
+                                  {ms.request_dates.map((d) => {
+                                    const day = Number(d.split('-')[2])
+                                    const fulfilled = dayOffDates.has(d)
+                                    return (
+                                      <span
+                                        key={d}
+                                        className={`text-[10px] px-1 rounded ${
+                                          fulfilled
+                                            ? 'bg-brand-50 text-brand-700'
+                                            : 'bg-warning-bg text-warning font-medium'
+                                        }`}
+                                      >
+                                        {day}
+                                      </span>
+                                    )
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
                   </TableBody>
                 </Table>
               </div>
@@ -412,7 +543,7 @@ export function ShiftPage() {
           )}
         </>
       ) : (
-        <div className="rounded-lg border border-warm-gray-200 bg-white p-12 text-center">
+        <div className="rounded-2xl bg-brand-50/30 p-12 text-center animate-in fade-in">
           <p className="text-warm-gray-500">
             シフトが生成されていません。「生成」ボタンを押してシフトを作成してください。
           </p>

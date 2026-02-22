@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { toast } from 'sonner'
 import { membersApi } from '@/api/fetcher'
 import { ngPairsApi } from '@/api/fetcher'
 import type { MemberResponse, NgPairResponse } from '@/api/constants'
@@ -13,7 +14,6 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
 
 function formatDate(iso: string): string {
@@ -28,7 +28,6 @@ export function NgPairPage() {
   const [members, setMembers] = useState<MemberResponse[]>([])
   const [ngPairs, setNgPairs] = useState<NgPairResponse[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [member1, setMember1] = useState<string>('')
   const [member2, setMember2] = useState<string>('')
   const [adding, setAdding] = useState(false)
@@ -38,7 +37,6 @@ export function NgPairPage() {
   const fetchData = useCallback(async () => {
     try {
       setLoading(true)
-      setError(null)
       const [membersData, pairsData] = await Promise.all([
         membersApi.list(),
         ngPairsApi.list(),
@@ -46,7 +44,7 @@ export function NgPairPage() {
       setMembers(membersData)
       setNgPairs(pairsData)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'データの取得に失敗しました')
+      toast.error(e instanceof Error ? e.message : 'データの取得に失敗しました')
     } finally {
       setLoading(false)
     }
@@ -60,16 +58,16 @@ export function NgPairPage() {
     if (!member1 || !member2) return
     try {
       setAdding(true)
-      setError(null)
       await ngPairsApi.create({
         member_id_1: Number(member1),
         member_id_2: Number(member2),
       })
       setMember1('')
       setMember2('')
+      toast.success('NGペアを追加しました')
       await fetchData()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'NGペアの追加に失敗しました')
+      toast.error(e instanceof Error ? e.message : 'NGペアの追加に失敗しました')
     } finally {
       setAdding(false)
     }
@@ -79,12 +77,12 @@ export function NgPairPage() {
     if (!deleteTarget) return
     try {
       setDeleting(true)
-      setError(null)
       await ngPairsApi.delete(deleteTarget.id)
       setDeleteTarget(null)
+      toast.success('NGペアを削除しました')
       await fetchData()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'NGペアの削除に失敗しました')
+      toast.error(e instanceof Error ? e.message : 'NGペアの削除に失敗しました')
     } finally {
       setDeleting(false)
     }
@@ -102,18 +100,12 @@ export function NgPairPage() {
         <h1 className="text-2xl font-bold tracking-tight text-warm-gray-900">
           NGペア管理
         </h1>
-        <p className="text-sm text-warm-gray-500 mt-1">
+        <p className="text-sm text-warm-gray-400 mt-1">
           同じシフトに入れないメンバーの組み合わせを管理します
         </p>
       </div>
 
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
-      <div className="flex items-end gap-3 rounded-lg border border-warm-gray-200 bg-white p-4">
+      <div className="flex items-end gap-3 rounded-2xl border-0 soft-shadow-md bg-white p-4">
         <div className="flex-1 space-y-1.5">
           <label className="text-sm font-medium text-warm-gray-700">メンバー1</label>
           <Select value={member1} onValueChange={setMember1}>
@@ -153,7 +145,7 @@ export function NgPairPage() {
         <Button
           onClick={handleAdd}
           disabled={!canAdd || adding}
-          className="shrink-0"
+          className="shrink-0 bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 shadow-sm"
         >
           {adding ? '追加中...' : '追加'}
         </Button>
@@ -167,14 +159,14 @@ export function NgPairPage() {
           <Skeleton className="h-10 w-full" />
         </div>
       ) : (
-        <div className="rounded-lg border border-warm-gray-200 bg-white">
+        <div className="rounded-2xl border-0 soft-shadow-md bg-white animate-in fade-in">
           <Table>
             <TableHeader>
-              <TableRow className="bg-warm-gray-50">
-                <TableHead className="font-semibold text-warm-gray-700">メンバー1</TableHead>
-                <TableHead className="font-semibold text-warm-gray-700">メンバー2</TableHead>
-                <TableHead className="font-semibold text-warm-gray-700">登録日</TableHead>
-                <TableHead className="font-semibold text-warm-gray-700 text-right">アクション</TableHead>
+              <TableRow className="bg-brand-50/60">
+                <TableHead className="font-semibold text-brand-800">メンバー1</TableHead>
+                <TableHead className="font-semibold text-brand-800">メンバー2</TableHead>
+                <TableHead className="font-semibold text-brand-800">登録日</TableHead>
+                <TableHead className="font-semibold text-brand-800 text-right">アクション</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -189,7 +181,7 @@ export function NgPairPage() {
                 </TableRow>
               ) : (
                 ngPairs.map((pair) => (
-                  <TableRow key={pair.id}>
+                  <TableRow key={pair.id} className="hover:bg-brand-50/30">
                     <TableCell className="text-warm-gray-900">{pair.member_name_1}</TableCell>
                     <TableCell className="text-warm-gray-900">{pair.member_name_2}</TableCell>
                     <TableCell className="text-warm-gray-600">{formatDate(pair.created_at)}</TableCell>
