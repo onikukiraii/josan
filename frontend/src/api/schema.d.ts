@@ -4,18 +4,193 @@
  */
 
 export interface paths {
-    "/users/": {
+    "/members/": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Get Users */
-        get: operations["get_users_users__get"];
+        /** Get Members */
+        get: operations["get_members_members__get"];
         put?: never;
-        /** Create User */
-        post: operations["create_user_users__post"];
+        /** Create Member */
+        post: operations["create_member_members__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/members/{member_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Member */
+        get: operations["get_member_members__member_id__get"];
+        /** Update Member */
+        put: operations["update_member_members__member_id__put"];
+        post?: never;
+        /** Delete Member */
+        delete: operations["delete_member_members__member_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ng-pairs/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Ng Pairs */
+        get: operations["get_ng_pairs_ng_pairs__get"];
+        put?: never;
+        /** Create Ng Pair */
+        post: operations["create_ng_pair_ng_pairs__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ng-pairs/{ng_pair_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Ng Pair */
+        delete: operations["delete_ng_pair_ng_pairs__ng_pair_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shift-requests/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Shift Requests */
+        get: operations["get_shift_requests_shift_requests__get"];
+        /** Bulk Update Shift Requests */
+        put: operations["bulk_update_shift_requests_shift_requests__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/pediatric-doctor-schedules/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Pediatric Doctor Schedules */
+        get: operations["get_pediatric_doctor_schedules_pediatric_doctor_schedules__get"];
+        /** Bulk Update Pediatric Doctor Schedules */
+        put: operations["bulk_update_pediatric_doctor_schedules_pediatric_doctor_schedules__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/schedules/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Schedule */
+        get: operations["get_schedule_schedules__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/schedules/generate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Generate Schedule */
+        post: operations["generate_schedule_schedules_generate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/schedules/{schedule_id}/assignments/{assignment_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update Assignment */
+        put: operations["update_assignment_schedules__schedule_id__assignments__assignment_id__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/schedules/{schedule_id}/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Schedule Summary */
+        get: operations["get_schedule_summary_schedules__schedule_id__summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/schedules/{schedule_id}/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Schedule Pdf */
+        get: operations["get_schedule_pdf_schedules__schedule_id__pdf_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -26,37 +201,273 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * CapabilityType
+         * @enum {string}
+         */
+        CapabilityType: "outpatient_leader" | "ward_leader" | "night_leader" | "day_shift" | "night_shift" | "beauty" | "mw_outpatient" | "ward_staff" | "rookie";
+        /**
+         * EmploymentType
+         * @enum {string}
+         */
+        EmploymentType: "full_time" | "part_time";
+        /** GenerateResponse */
+        GenerateResponse: {
+            /** スケジュール */
+            schedule: components["schemas"]["ScheduleResponse"];
+            /** 未充足希望休 */
+            unfulfilled_requests: components["schemas"]["UnfulfilledRequest"][];
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
-        /** UserCreateParams */
-        UserCreateParams: {
-            /** Name */
+        /** MemberCreateParams */
+        MemberCreateParams: {
+            /** 名前 */
             name: string;
+            /** 職能 */
+            qualification: components["schemas"]["Qualification"];
+            /** 雇用形態 */
+            employment_type: components["schemas"]["EmploymentType"];
             /**
-             * Email
-             * Format: email
+             * 夜勤上限
+             * @default 4
              */
-            email: string;
+            max_night_shifts: number;
+            /**
+             * 能力
+             * @default []
+             */
+            capabilities: components["schemas"]["CapabilityType"][];
         };
-        /** UserResponse */
-        UserResponse: {
+        /** MemberResponse */
+        MemberResponse: {
             /** Id */
             id: number;
-            /** Name */
+            /** 名前 */
             name: string;
-            /**
-             * Email
-             * Format: email
-             */
-            email: string;
+            /** 職能 */
+            qualification: components["schemas"]["Qualification"];
+            /** 雇用形態 */
+            employment_type: components["schemas"]["EmploymentType"];
+            /** 夜勤上限 */
+            max_night_shifts: number;
+            /** 夜勤控除残高 */
+            night_shift_deduction_balance: number;
+            /** 能力 */
+            capabilities: components["schemas"]["CapabilityType"][];
             /**
              * Created At
              * Format: date-time
              */
             created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** MemberSummary */
+        MemberSummary: {
+            /** メンバーID */
+            member_id: number;
+            /** メンバー名 */
+            member_name: string;
+            /** 勤務日数 */
+            working_days: number;
+            /** 公休数 */
+            day_off_count: number;
+            /** 夜勤回数 */
+            night_shift_count: number;
+            /** 日祝出勤数 */
+            holiday_work_count: number;
+            /** 希望休充足数 */
+            request_fulfilled: number;
+            /** 希望休合計 */
+            request_total: number;
+        };
+        /** MemberUpdateParams */
+        MemberUpdateParams: {
+            /** 名前 */
+            name?: string | null;
+            /** 職能 */
+            qualification?: components["schemas"]["Qualification"] | null;
+            /** 雇用形態 */
+            employment_type?: components["schemas"]["EmploymentType"] | null;
+            /** 夜勤上限 */
+            max_night_shifts?: number | null;
+            /** 能力 */
+            capabilities?: components["schemas"]["CapabilityType"][] | null;
+        };
+        /** NgPairCreateParams */
+        NgPairCreateParams: {
+            /** Member Id 1 */
+            member_id_1: number;
+            /** Member Id 2 */
+            member_id_2: number;
+        };
+        /** NgPairResponse */
+        NgPairResponse: {
+            /** Id */
+            id: number;
+            /** メンバー1 ID */
+            member_id_1: number;
+            /** メンバー2 ID */
+            member_id_2: number;
+            /** メンバー1 名前 */
+            member_name_1: string;
+            /** メンバー2 名前 */
+            member_name_2: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** PediatricDoctorScheduleBulkParams */
+        PediatricDoctorScheduleBulkParams: {
+            /** Year Month */
+            year_month: string;
+            /** Dates */
+            dates: string[];
+        };
+        /** PediatricDoctorScheduleResponse */
+        PediatricDoctorScheduleResponse: {
+            /** Id */
+            id: number;
+            /**
+             * 日付
+             * Format: date
+             */
+            date: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /**
+         * Qualification
+         * @enum {string}
+         */
+        Qualification: "nurse" | "associate_nurse" | "midwife";
+        /** ScheduleGenerateParams */
+        ScheduleGenerateParams: {
+            /** Year Month */
+            year_month: string;
+        };
+        /** ScheduleResponse */
+        ScheduleResponse: {
+            /** Id */
+            id: number;
+            /** 年月 */
+            year_month: string;
+            /** ステータス */
+            status: components["schemas"]["ScheduleStatus"];
+            /** シフト割当 */
+            assignments: components["schemas"]["ShiftAssignmentResponse"][];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * ScheduleStatus
+         * @enum {string}
+         */
+        ScheduleStatus: "draft" | "published";
+        /** ScheduleSummaryResponse */
+        ScheduleSummaryResponse: {
+            /** スケジュールID */
+            schedule_id: number;
+            /** 年月 */
+            year_month: string;
+            /** メンバーサマリー */
+            members: components["schemas"]["MemberSummary"][];
+        };
+        /** ShiftAssignmentResponse */
+        ShiftAssignmentResponse: {
+            /** Id */
+            id: number;
+            /** スケジュールID */
+            schedule_id: number;
+            /** メンバーID */
+            member_id: number;
+            /** メンバー名 */
+            member_name: string;
+            /**
+             * 日付
+             * Format: date
+             */
+            date: string;
+            /** シフト種別 */
+            shift_type: components["schemas"]["ShiftType"];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** ShiftAssignmentUpdateParams */
+        ShiftAssignmentUpdateParams: {
+            shift_type: components["schemas"]["ShiftType"];
+            /** Member Id */
+            member_id: number;
+        };
+        /** ShiftRequestBulkParams */
+        ShiftRequestBulkParams: {
+            /** Member Id */
+            member_id: number;
+            /** Year Month */
+            year_month: string;
+            /** Dates */
+            dates: string[];
+        };
+        /** ShiftRequestResponse */
+        ShiftRequestResponse: {
+            /** Id */
+            id: number;
+            /** メンバーID */
+            member_id: number;
+            /** メンバー名 */
+            member_name: string;
+            /** 年月 */
+            year_month: string;
+            /**
+             * 日付
+             * Format: date
+             */
+            date: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /**
+         * ShiftType
+         * @enum {string}
+         */
+        ShiftType: "outpatient_leader" | "treatment_room" | "beauty" | "mw_outpatient" | "ward_leader" | "ward" | "delivery" | "delivery_charge" | "night_leader" | "night" | "day_off";
+        /** UnfulfilledRequest */
+        UnfulfilledRequest: {
+            /** メンバーID */
+            member_id: number;
+            /** メンバー名 */
+            member_name: string;
+            /**
+             * 日付
+             * Format: date
+             */
+            date: string;
         };
         /** ValidationError */
         ValidationError: {
@@ -76,7 +487,7 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    get_users_users__get: {
+    get_members_members__get: {
         parameters: {
             query?: never;
             header?: never;
@@ -91,12 +502,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UserResponse"][];
+                    "application/json": components["schemas"]["MemberResponse"][];
                 };
             };
         };
     };
-    create_user_users__post: {
+    create_member_members__post: {
         parameters: {
             query?: never;
             header?: never;
@@ -105,7 +516,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["UserCreateParams"];
+                "application/json": components["schemas"]["MemberCreateParams"];
             };
         };
         responses: {
@@ -115,7 +526,482 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["UserResponse"];
+                    "application/json": components["schemas"]["MemberResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_member_members__member_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                member_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_member_members__member_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                member_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MemberUpdateParams"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_member_members__member_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                member_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_ng_pairs_ng_pairs__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NgPairResponse"][];
+                };
+            };
+        };
+    };
+    create_ng_pair_ng_pairs__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NgPairCreateParams"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NgPairResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_ng_pair_ng_pairs__ng_pair_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ng_pair_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_shift_requests_shift_requests__get: {
+        parameters: {
+            query: {
+                year_month: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShiftRequestResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bulk_update_shift_requests_shift_requests__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShiftRequestBulkParams"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShiftRequestResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_pediatric_doctor_schedules_pediatric_doctor_schedules__get: {
+        parameters: {
+            query: {
+                year_month: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PediatricDoctorScheduleResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bulk_update_pediatric_doctor_schedules_pediatric_doctor_schedules__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PediatricDoctorScheduleBulkParams"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PediatricDoctorScheduleResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_schedule_schedules__get: {
+        parameters: {
+            query: {
+                year_month: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduleResponse"] | null;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    generate_schedule_schedules_generate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScheduleGenerateParams"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GenerateResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_assignment_schedules__schedule_id__assignments__assignment_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                schedule_id: number;
+                assignment_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShiftAssignmentUpdateParams"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShiftAssignmentResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_schedule_summary_schedules__schedule_id__summary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                schedule_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduleSummaryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_schedule_pdf_schedules__schedule_id__pdf_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                schedule_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
