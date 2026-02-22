@@ -28,8 +28,6 @@ services:
     command: ["npm", "run", "dev"]
   db:
     image: mysql:8.0
-    env_file:
-      - .env
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}

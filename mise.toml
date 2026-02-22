@@ -33,6 +33,35 @@ run = [
 dir = "backend"
 
 [tasks.dev]
-description = "Start development server"
+description = "Start backend development server"
 run = "uv run fastapi dev"
 dir = "backend"
+
+[tasks."dev:front"]
+description = "Start frontend development server"
+run = "npm run dev"
+dir = "frontend"
+
+[tasks."lint:front"]
+description = "Run frontend linters (ESLint + TypeScript)"
+run = ["npm run lint", "npx tsc --noEmit"]
+dir = "frontend"
+
+[tasks."lint:all"]
+description = "Run all linters (backend + frontend)"
+depends = ["lint", "lint:front"]
+
+[tasks."build:front"]
+description = "Build frontend for production"
+run = "npm run build"
+dir = "frontend"
+
+[tasks.generate-api]
+description = "Generate TypeScript types from OpenAPI schema (requires backend running)"
+run = "npm run generate-api"
+dir = "frontend"
+
+[tasks."format:front"]
+description = "Fix frontend lint issues"
+run = "npx eslint --fix ."
+dir = "frontend"

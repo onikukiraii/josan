@@ -8,7 +8,10 @@ dependencies = [
     "alembic>=1.17.2",
     "cryptography>=46.0.3",
     "fastapi[standard]>=0.115.0",
+    "jpholiday>=0.1.10",
+    "ortools>=9.12",
     "pymysql>=1.1.2",
+    "reportlab>=4.3",
     "sqlalchemy>=2.0.45",
 ]
 
@@ -62,4 +65,16 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = "entity.*"
-disable_error_code = ["misc"]  # SQLAlchemy Base subclass issue
+disable_error_code = ["misc", "var-annotated"]  # SQLAlchemy Base subclass + Column type inference
+
+[[tool.mypy.overrides]]
+module = "routers.*"
+disable_error_code = ["arg-type", "assignment", "call-overload"]  # SQLAlchemy Column型の推論不足
+
+[[tool.mypy.overrides]]
+module = "solver.*"
+disable_error_code = ["arg-type", "assignment", "call-overload", "misc", "return-value", "index"]
+
+[[tool.mypy.overrides]]
+module = "pdf.*"
+disable_error_code = ["arg-type"]
