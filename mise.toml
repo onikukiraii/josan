@@ -1,0 +1,38 @@
+[tools]
+python = "3.14.2"
+uv = "latest"
+
+[env]
+_.file = ".env"
+
+[tasks.migrate]
+description = "Run database migrations"
+run = "uv run alembic upgrade head"
+dir = "backend"
+
+[tasks.migrate-gen]
+description = "Generate a new migration file"
+run = "uv run alembic revision --autogenerate -m '{{arg(name=\"message\")}}'"
+dir = "backend"
+
+[tasks.lint]
+description = "Run linters (Ruff + mypy)"
+run = [
+  "uv run ruff check .",
+  "uv run ruff format --check .",
+  "uv run mypy ."
+]
+dir = "backend"
+
+[tasks.format]
+description = "Format code with Ruff"
+run = [
+  "uv run ruff check --fix .",
+  "uv run ruff format ."
+]
+dir = "backend"
+
+[tasks.dev]
+description = "Start development server"
+run = "uv run fastapi dev"
+dir = "backend"
