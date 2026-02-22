@@ -34,6 +34,19 @@ from solver.diagnostics import diagnose_infeasibility
 logger = logging.getLogger(__name__)
 
 SOLVER_TIMEOUT_SECONDS = 60
+RELAXATION_TIMEOUT_SECONDS = 10
+
+# 緩和対象の制約ラベル（H1-H5は基本制約のためスキップ不可）
+CONSTRAINT_LABELS: dict[str, str] = {
+    "H6": "夜勤翌日は必ず休み",
+    "H7": "NGペアは同日の夜勤に同時配置しない",
+    "H8": "夜勤2名のうち最低1名は助産師",
+    "H9": "連続勤務は最大5日",
+    "H10": "夜勤回数の月間上限",
+    "H11": "公休日数の制約",
+    "H13": "新人の病棟5名体制",
+    "H14": "日祝は病棟系のみ稼働",
+}
 
 
 def _load_data(
@@ -114,21 +127,81 @@ def _add_hard_constraints(
     pediatric_dates: set[datetime.date],
     rookie_ids: list[int],
     part_time_ids: set[int] | None = None,
+    skip_constraints: set[str] | None = None,
 ) -> None:
+    skip = skip_constraints or set()
+
+    # H1-H5 は基本制約（常に適用）
     add_one_shift_per_day(model, x, member_ids, dates)
     add_staffing_requirements(model, x, member_ids, dates, pediatric_dates)
     add_capability_constraints(model, x, member_ids, dates, member_capabilities, member_qualifications)
     add_day_shift_eligibility(model, x, member_ids, dates, member_capabilities)
     add_night_shift_eligibility(model, x, member_ids, dates, member_capabilities)
-    add_night_then_off(model, x, member_ids, dates)
-    add_ng_pair_constraint(model, x, dates, ng_pairs)
-    add_night_midwife_constraint(model, x, member_ids, dates, member_qualifications)
-    add_max_consecutive_work(model, x, member_ids, dates)
-    add_night_shift_limit(model, x, member_ids, dates, member_max_nights)
-    add_off_day_count(model, x, member_ids, dates, member_off_days, part_time_ids)
-    add_sunday_holiday_ward_only(model, x, member_ids, dates)
-    if rookie_ids:
+
+    if "H6" not in skip:
+        add_night_then_off(model, x, member_ids, dates)
+    if "H7" not in skip:
+        add_ng_pair_constraint(model, x, dates, ng_pairs)
+    if "H8" not in skip:
+        add_night_midwife_constraint(model, x, member_ids, dates, member_qualifications)
+    if "H9" not in skip:
+        add_max_consecutive_work(model, x, member_ids, dates)
+    if "H10" not in skip:
+        add_night_shift_limit(model, x, member_ids, dates, member_max_nights)
+    if "H11" not in skip:
+        add_off_day_count(model, x, member_ids, dates, member_off_days, part_time_ids)
+    if "H14" not in skip:
+        add_sunday_holiday_ward_only(model, x, member_ids, dates)
+    if rookie_ids and "H13" not in skip:
         add_rookie_ward_constraint(model, x, member_ids, dates, rookie_ids, member_capabilities)
+
+
+def _diagnose_by_relaxation(
+    member_ids: list[int],
+    dates: list[datetime.date],
+    member_capabilities: dict[int, set[CapabilityType]],
+    member_qualifications: dict[int, Qualification],
+    member_max_nights: dict[int, int],
+    member_off_days: dict[int, int],
+    ng_pairs: list[tuple[int, int]],
+    pediatric_dates: set[datetime.date],
+    rookie_ids: list[int],
+    part_time_ids: set[int] | None = None,
+) -> list[str]:
+    """制約を1つずつ外して再求解し、どの制約が原因か特定する。"""
+    relaxable: list[str] = []
+
+    for key, label in CONSTRAINT_LABELS.items():
+        if key == "H13" and not rookie_ids:
+            continue
+
+        model = cp_model.CpModel()
+        x = _create_variables(model, member_ids, dates)
+        _add_hard_constraints(
+            model,
+            x,
+            member_ids,
+            dates,
+            member_capabilities,
+            member_qualifications,
+            member_max_nights,
+            member_off_days,
+            ng_pairs,
+            pediatric_dates,
+            rookie_ids,
+            part_time_ids,
+            skip_constraints={key},
+        )
+
+        solver = cp_model.CpSolver()
+        solver.parameters.max_time_in_seconds = RELAXATION_TIMEOUT_SECONDS
+        status = solver.solve(model)
+
+        if status in (cp_model.OPTIMAL, cp_model.FEASIBLE):
+            relaxable.append(f"「{label}」（{key}）を緩和すると解が見つかります")
+            logger.info("Relaxation diagnostic: removing %s (%s) makes problem feasible", key, label)
+
+    return relaxable
 
 
 def generate_shift(db: Session, year_month: str) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
@@ -231,10 +304,30 @@ def generate_shift(db: Session, year_month: str) -> tuple[list[dict[str, object]
             if problems:
                 detail = "以下の問題が見つかりました:\n" + "\n".join(f"・{p}" for p in problems)
             else:
-                detail = (
-                    "制約条件を満たすシフトの組み合わせが見つかりませんでした。"
-                    "メンバー数や希望休、NGペアの設定を見直してください。"
+                # 静的診断で見つからない場合、制約緩和による診断を実行
+                logger.info("Static diagnostics found no issues. Running constraint relaxation diagnosis.")
+                relaxable = _diagnose_by_relaxation(
+                    member_ids,
+                    dates,
+                    member_capabilities,
+                    member_qualifications,
+                    member_max_nights,
+                    member_off_days,
+                    ng_pairs,
+                    pediatric_dates,
+                    rookie_ids,
+                    part_time_ids,
                 )
+                if relaxable:
+                    detail = (
+                        "制約の組み合わせにより解が見つかりませんでした。\n"
+                        "以下の制約を見直すと解決する可能性があります:\n" + "\n".join(f"・{r}" for r in relaxable)
+                    )
+                else:
+                    detail = (
+                        "制約条件を満たすシフトの組み合わせが見つかりませんでした。"
+                        "メンバー数や希望休、NGペアの設定を見直してください。"
+                    )
             raise RuntimeError(detail)
 
         # Step 3: 叶えられなかった希望休を特定
