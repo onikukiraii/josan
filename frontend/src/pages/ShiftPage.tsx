@@ -71,13 +71,17 @@ function formatDate(date: Date): string {
 
 function buildAssignmentMap(
   assignments: ShiftAssignmentResponse[],
-): Map<string, Map<ShiftType, ShiftAssignmentResponse>> {
-  const map = new Map<string, Map<ShiftType, ShiftAssignmentResponse>>()
+): Map<string, Map<ShiftType, ShiftAssignmentResponse[]>> {
+  const map = new Map<string, Map<ShiftType, ShiftAssignmentResponse[]>>()
   for (const a of assignments) {
     if (!map.has(a.date)) {
       map.set(a.date, new Map())
     }
-    map.get(a.date)!.set(a.shift_type, a)
+    const dateMap = map.get(a.date)!
+    if (!dateMap.has(a.shift_type)) {
+      dateMap.set(a.shift_type, [])
+    }
+    dateMap.get(a.shift_type)!.push(a)
   }
   return map
 }
@@ -178,7 +182,7 @@ export function ShiftPage() {
   }, [schedule])
 
   const assignmentMap = useMemo(() => {
-    if (!schedule) return new Map<string, Map<ShiftType, ShiftAssignmentResponse>>()
+    if (!schedule) return new Map<string, Map<ShiftType, ShiftAssignmentResponse[]>>()
     return buildAssignmentMap(schedule.assignments)
   }, [schedule])
 
@@ -297,7 +301,7 @@ export function ShiftPage() {
                           {date.getDate()} ({getDayLabel(date)})
                         </TableCell>
                         {DISPLAY_SHIFT_TYPES.map((st) => {
-                          const assignment = dayAssignments?.get(st)
+                          const cellAssignments = dayAssignments?.get(st) ?? []
                           const isNight = NIGHT_SHIFT_TYPES.includes(st)
                           const filteredMembers = getFilteredMembers(members, st)
 
@@ -313,39 +317,39 @@ export function ShiftPage() {
                               key={st}
                               className={`text-center p-1 ${cellBg}`}
                             >
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <button
-                                    type="button"
-                                    className={`w-full px-1 py-1 rounded text-xs cursor-pointer hover:bg-warm-gray-200/60 transition-colors ${
-                                      assignment
-                                        ? 'text-warm-gray-900 font-medium'
-                                        : 'text-warm-gray-400'
-                                    } max-w-16 truncate block mx-auto`}
-                                  >
-                                    {assignment ? assignment.member_name : '—'}
-                                  </button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="start" className="max-h-64 overflow-y-auto">
-                                  {filteredMembers.map((m) => (
-                                    <DropdownMenuItem
-                                      key={m.id}
-                                      onClick={() => {
-                                        if (assignment) {
-                                          handleAssignmentUpdate(assignment.id, st, m.id)
-                                        }
-                                      }}
-                                    >
-                                      {m.name}
-                                    </DropdownMenuItem>
+                              {cellAssignments.length > 0 ? (
+                                <div className="space-y-0.5">
+                                  {cellAssignments.map((assignment) => (
+                                    <DropdownMenu key={assignment.id}>
+                                      <DropdownMenuTrigger asChild>
+                                        <button
+                                          type="button"
+                                          className="w-full px-1 py-0.5 rounded text-xs cursor-pointer hover:bg-warm-gray-200/60 transition-colors text-warm-gray-900 font-medium max-w-16 truncate block mx-auto"
+                                        >
+                                          {assignment.member_name}
+                                        </button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="start" className="max-h-64 overflow-y-auto">
+                                        {filteredMembers.map((m) => (
+                                          <DropdownMenuItem
+                                            key={m.id}
+                                            onClick={() => handleAssignmentUpdate(assignment.id, st, m.id)}
+                                          >
+                                            {m.name}
+                                          </DropdownMenuItem>
+                                        ))}
+                                        {filteredMembers.length === 0 && (
+                                          <DropdownMenuItem disabled>
+                                            該当メンバーなし
+                                          </DropdownMenuItem>
+                                        )}
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
                                   ))}
-                                  {filteredMembers.length === 0 && (
-                                    <DropdownMenuItem disabled>
-                                      該当メンバーなし
-                                    </DropdownMenuItem>
-                                  )}
-                                </DropdownMenuContent>
-                              </DropdownMenu>
+                                </div>
+                              ) : (
+                                <span className="text-xs text-warm-gray-400">—</span>
+                              )}
                             </TableCell>
                           )
                         })}
