@@ -34,7 +34,7 @@ STAFFING_REQUIREMENTS: list[StaffingRequirement] = [
     StaffingRequirement(
         shift_type=ShiftType.treatment_room,
         min_staff={DayType.weekday: 1, DayType.saturday: 1, DayType.sunday_holiday: 0},
-        max_staff={DayType.weekday: 2, DayType.saturday: 2, DayType.sunday_holiday: 0},
+        max_staff={DayType.weekday: 5, DayType.saturday: 5, DayType.sunday_holiday: 0},
     ),
     StaffingRequirement(
         shift_type=ShiftType.beauty,
@@ -58,7 +58,7 @@ STAFFING_REQUIREMENTS: list[StaffingRequirement] = [
     StaffingRequirement(
         shift_type=ShiftType.ward,
         min_staff={DayType.weekday: 1, DayType.saturday: 1, DayType.sunday_holiday: 1},
-        max_staff={DayType.weekday: 1, DayType.saturday: 1, DayType.sunday_holiday: 1},
+        max_staff={DayType.weekday: 5, DayType.saturday: 5, DayType.sunday_holiday: 3},
         required_capabilities=[CapabilityType.ward_staff],
         is_ward_family=True,
     ),

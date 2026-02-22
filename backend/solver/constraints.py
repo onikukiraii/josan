@@ -210,7 +210,7 @@ def add_off_day_count(
     member_off_days: dict[int, int],
     part_time_ids: set[int] | None = None,
 ) -> None:
-    """H11: 公休日数 = 月の規定日数（非常勤は >=）"""
+    """H11: 公休日数（常勤 == 規定日数、非常勤 >= 最低保証）"""
     pt = part_time_ids or set()
     for m in member_ids:
         required_off = member_off_days.get(m, 10)
