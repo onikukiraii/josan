@@ -2,7 +2,7 @@ import datetime as dt
 
 from pydantic import BaseModel, Field
 
-from entity.enums import ScheduleStatus, ShiftType
+from entity.enums import EmploymentType, ScheduleStatus, ShiftType
 
 
 class ShiftAssignmentResponse(BaseModel):
@@ -15,6 +15,11 @@ class ShiftAssignmentResponse(BaseModel):
     created_at: dt.datetime
 
     model_config = {"from_attributes": True}
+
+
+class ShiftAssignmentResult(BaseModel):
+    assignment: ShiftAssignmentResponse = Field(title="シフト割当")
+    warnings: list[str] = Field(default_factory=list, title="警告メッセージ")
 
 
 class ScheduleResponse(BaseModel):
@@ -31,17 +36,20 @@ class ScheduleResponse(BaseModel):
 class MemberSummary(BaseModel):
     member_id: int = Field(title="メンバーID")
     member_name: str = Field(title="メンバー名")
+    employment_type: EmploymentType = Field(title="雇用形態")
     working_days: int = Field(title="勤務日数")
     day_off_count: int = Field(title="公休数")
     night_shift_count: int = Field(title="夜勤回数")
     holiday_work_count: int = Field(title="日祝出勤数")
     request_fulfilled: int = Field(title="希望休充足数")
     request_total: int = Field(title="希望休合計")
+    request_dates: list[dt.date] = Field(title="希望休日付")
 
 
 class ScheduleSummaryResponse(BaseModel):
     schedule_id: int = Field(title="スケジュールID")
     year_month: str = Field(title="年月")
+    expected_working_days: int = Field(title="基準勤務日数")
     members: list[MemberSummary] = Field(title="メンバーサマリー")
 
 
