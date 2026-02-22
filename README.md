@@ -1,12 +1,12 @@
-# FastAPI App Template
+# Josan
 
-FastAPI + HTMX で作る Web アプリケーションのテンプレート
+FastAPI + React で作る Web アプリケーション
 
 ## Tech Stack
 
 - **Backend**: FastAPI, SQLAlchemy, Alembic
-- **Database**: MySQL 8.0, OpenSearch
-- **Frontend**: HTMX
+- **Frontend**: React, TypeScript, Vite, Tailwind CSS, openapi-typescript
+- **Database**: MySQL 8.0
 - **Tools**: uv, mise, Ruff, mypy
 
 ## Requirements
@@ -53,9 +53,9 @@ docker compose up -d
 ```
 
 以下のサービスが起動します:
+- **Frontend**: http://localhost:5173
 - **API**: http://localhost:8000
 - **MySQL**: localhost:3309
-- **OpenSearch**: localhost:9205
 
 ### 6. マイグレーション実行
 
@@ -71,7 +71,7 @@ mise run migrate
 mise run dev
 ```
 
-※ MySQL と OpenSearch は別途起動が必要です。
+※ MySQL は別途起動が必要です。
 
 ### コマンド一覧
 
@@ -100,6 +100,11 @@ mise tasks  # 利用可能なタスク一覧を表示
 │   ├── params/         # リクエストパラメータ
 │   ├── response/       # レスポンススキーマ
 │   └── main.py         # エントリーポイント
+├── frontend/
+│   ├── docker/         # Dockerfile
+│   ├── src/
+│   │   ├── api/        # 型安全な API クライアント (自動生成型含む)
+│   └── vite.config.ts  # Vite 設定
 ├── compose.yaml
 ├── mise.toml           # ツール & タスク定義
 └── .env.template
