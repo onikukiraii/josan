@@ -1,115 +1,124 @@
-# Josan
+# Josan - 産婦人科シフト管理アプリ
 
-FastAPI + React で作る Web アプリケーション
+産婦人科クリニックにおけるスタッフのシフト管理を自動化する Web アプリケーション。
+約 30 名規模のスタッフに対し、月単位でシフトを自動生成し、各種制約条件を満たしながら公平な勤務割り当てを実現する。
 
-## Tech Stack
+## 主要機能
 
-- **Backend**: FastAPI, SQLAlchemy, Alembic
-- **Frontend**: React, TypeScript, Vite, Tailwind CSS, openapi-typescript
-- **Database**: MySQL 8.0
-- **Tools**: uv, mise, Ruff, mypy
+- シフト自動生成（Google OR-Tools CP-SAT ソルバーによる制約充足最適化）
+- 希望休の提出・管理
+- メンバー登録・属性管理
+- シフト表の表示・編集・PDF 出力
 
-## Requirements
+## 技術スタック
 
-- [mise](https://mise.jdx.dev/) (Python, uv のバージョン管理 & タスクランナー)
+| レイヤー | 技術 |
+|---|---|
+| バックエンド | Python 3.14 / FastAPI / SQLAlchemy / Alembic |
+| フロントエンド | React 19 / TypeScript 5.9 / Vite 7 / Tailwind CSS v4 |
+| UI コンポーネント | shadcn/ui / Radix UI / Lucide Icons |
+| シフト生成エンジン | Google OR-Tools CP-SAT ソルバー |
+| DB | MySQL 8 |
+| パッケージ管理 | uv (backend) / npm (frontend) |
+| タスクランナー | [mise](https://mise.jdx.dev/) |
+| コンテナ | Docker Compose |
+
+## ディレクトリ構成
+
+```
+├── backend/
+│   ├── entity/        # SQLAlchemy モデル
+│   ├── routers/       # API エンドポイント
+│   ├── params/        # リクエストスキーマ (Pydantic)
+│   ├── response/      # レスポンススキーマ (Pydantic)
+│   ├── solver/        # シフト生成ソルバー
+│   ├── pdf/           # PDF 出力
+│   ├── db/            # DB 接続設定
+│   └── alembic/       # マイグレーション
+├── frontend/
+│   └── src/
+│       ├── api/       # API クライアント・型定義
+│       ├── components/
+│       ├── pages/
+│       ├── hooks/
+│       └── layouts/
+├── docs/              # 仕様書
+└── compose.yaml
+```
+
+## セットアップ
+
+### 必要なもの
+
+- [mise](https://mise.jdx.dev/) — Python, uv のバージョン管理 & タスクランナー
 - [Docker](https://www.docker.com/) & Docker Compose
 
-## Quick Start
-
-### 1. mise のインストール
+### 手順
 
 ```bash
-# macOS (Homebrew)
-brew install mise
-```
-
-### 2. リポジトリをクローン
-
-```bash
-git clone https://github.com/<your-username>/<your-repo>.git
-cd <your-repo>
-```
-
-### 3. ツールのインストール
-
-```bash
+# 1. ツールのインストール (Python 3.14 + uv)
 mise install
-```
 
-これで Python 3.14 と uv がインストールされます。
-
-### 4. 環境変数の設定
-
-```bash
-cp .env.template .env
-```
-
-必要に応じて `.env` を編集してください。
-
-### 5. Docker Compose で起動
-
-```bash
+# 2. 全サービス起動 (API:8000, Frontend:5173, MySQL:3309)
 docker compose up -d
-```
 
-以下のサービスが起動します:
-- **Frontend**: http://localhost:5173
-- **API**: http://localhost:8000
-- **MySQL**: localhost:3309
-
-### 6. マイグレーション実行
-
-```bash
+# 3. DB マイグレーション
 mise run migrate
 ```
 
-## Development
+起動後のアクセス先:
 
-### ローカル開発（Docker なし）
+- **Frontend**: http://localhost:5173
+- **API**: http://localhost:8000
+- **API ドキュメント**: http://localhost:8000/docs
 
-```bash
-mise run dev
-```
-
-※ MySQL は別途起動が必要です。
-
-### コマンド一覧
-
-```bash
-mise tasks  # 利用可能なタスク一覧を表示
-```
+## 開発コマンド
 
 | コマンド | 説明 |
-|---------|------|
+|---|---|
+| `docker compose up -d` | 全サービス起動 |
+| `mise run dev` | バックエンド開発サーバー |
+| `mise run dev:front` | フロントエンド開発サーバー |
 | `mise run migrate` | マイグレーション実行 |
-| `mise run migrate-gen message="add users table"` | マイグレーションファイル生成 |
-| `mise run lint` | Lint チェック (Ruff + mypy) |
-| `mise run format` | コードフォーマット |
-| `mise run dev` | 開発サーバー起動 |
+| `mise run migrate-gen message="xxx"` | マイグレーション生成 |
+| `mise run lint` | バックエンド lint (Ruff + mypy) |
+| `mise run lint:front` | フロントエンド lint (ESLint + tsc) |
+| `mise run lint:all` | 全体 lint |
+| `mise run format` | バックエンド フォーマット (Ruff) |
+| `mise run format:front` | フロントエンド lint fix (ESLint) |
+| `mise run generate-api` | OpenAPI → TypeScript 型生成 (要 API サーバー起動) |
+| `mise run build:front` | フロントエンド本番ビルド |
 
-### ディレクトリ構成
+## API 型生成フロー
 
-```
-.
-├── backend/
-│   ├── alembic/        # マイグレーション
-│   ├── db/             # DB接続設定
-│   ├── docker/         # Dockerfile
-│   ├── entity/         # SQLAlchemy モデル
-│   ├── routers/        # APIルーター
-│   ├── params/         # リクエストパラメータ
-│   ├── response/       # レスポンススキーマ
-│   └── main.py         # エントリーポイント
-├── frontend/
-│   ├── docker/         # Dockerfile
-│   ├── src/
-│   │   ├── api/        # 型安全な API クライアント (自動生成型含む)
-│   └── vite.config.ts  # Vite 設定
-├── compose.yaml
-├── mise.toml           # ツール & タスク定義
-└── .env.template
+バックエンドの Pydantic スキーマからフロントエンドの型安全な API クライアントまで、自動生成のパイプラインで接続している。
+
+```mermaid
+flowchart LR
+    A[Pydantic モデル<br/>params/ response/] --> B[FastAPI<br/>OpenAPI JSON]
+    B --> C[openapi-typescript<br/>schema.d.ts]
+    C --> D[openapi-fetch<br/>型安全 API クライアント]
 ```
 
-## License
+```bash
+# API サーバー起動中に実行
+mise run generate-api
+```
 
-MIT
+生成されるファイル:
+
+| ファイル | 役割 |
+|---|---|
+| `frontend/src/api/schema.d.ts` | openapi-typescript が生成する型定義（自動生成・編集不可） |
+| `frontend/src/api/constants.ts` | schema.d.ts からの型エイリアス・ラベルマップ |
+| `frontend/src/api/fetcher.ts` | openapi-fetch を使った型安全な API クライアント |
+
+## ドキュメント
+
+| ファイル | 内容 |
+|---|---|
+| [00_概要.md](docs/00_概要.md) | プロジェクト概要と技術スタック |
+| [01_データモデル.md](docs/01_データモデル.md) | テーブル定義、ENUM 値、ER 図 |
+| [02_配置ルール.md](docs/02_配置ルール.md) | 日別配置パターン、公休日数、希望休ルール |
+| [03_シフト生成アルゴリズム.md](docs/03_シフト生成アルゴリズム.md) | ソルバー設定、制約条件、求解戦略 |
+| [04_アプリケーション仕様.md](docs/04_アプリケーション仕様.md) | 画面一覧、各画面の仕様、PDF 出力 |

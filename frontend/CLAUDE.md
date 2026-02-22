@@ -16,15 +16,21 @@ npm run lint      # eslint
 npm run generate-api  # OpenAPI スキーマから TypeScript 型を生成
 ```
 
-- `src/api/schema.d.ts` - openapi-typescript が生成する型定義（自動生成）
-- `src/api/client.ts` - openapi-fetch を使った型安全な API クライアント
+- `src/api/schema.d.ts` - openapi-typescript が生成する型定義（自動生成・編集不可）
+- `src/api/constants.ts` - schema.d.ts からの型エイリアス re-export + ラベルマップ
+- `src/api/fetcher.ts` - openapi-fetch を使った型安全な API クライアント
 - API サーバー起動中に実行すること（`docker compose up api`）
 
 ### 使い方
 
 ```ts
-import { api } from "./api/client";
-const { data, error } = await api.GET("/endpoint");
+// 型・ラベルのインポート
+import type { MemberResponse, Qualification } from '@/api/constants'
+import { QUALIFICATION_LABEL } from '@/api/constants'
+
+// API 呼び出し
+import { membersApi } from '@/api/fetcher'
+const members = await membersApi.list()
 ```
 
 ## コード規約
