@@ -258,14 +258,14 @@ class TestH12ShiftRequestHard:
     def test_request_honored(self, two_day_dates: list[datetime.date]) -> None:
         model, x = make_model_and_vars([1], two_day_dates)
         add_one_shift_per_day(model, x, [1], two_day_dates)
-        add_shift_request_hard(model, x, {1: [two_day_dates[0]]})
+        add_shift_request_hard(model, x, {1: [(two_day_dates[0], ShiftType.day_off)]})
         solver = assert_feasible(model)
         assert solver.value(x[1][str(two_day_dates[0])][ShiftType.day_off]) == 1
 
     def test_request_violated_infeasible(self, two_day_dates: list[datetime.date]) -> None:
         model, x = make_model_and_vars([1], two_day_dates)
         add_one_shift_per_day(model, x, [1], two_day_dates)
-        add_shift_request_hard(model, x, {1: [two_day_dates[0]]})
+        add_shift_request_hard(model, x, {1: [(two_day_dates[0], ShiftType.day_off)]})
         model.add(x[1][str(two_day_dates[0])][ShiftType.day_off] == 0)
         assert_infeasible(model)
 
@@ -358,13 +358,13 @@ class TestS1ShiftRequestSoft:
     def test_fulfillment_vars_returned(self, two_day_dates: list[datetime.date]) -> None:
         model, x = make_model_and_vars([1], two_day_dates)
         add_one_shift_per_day(model, x, [1], two_day_dates)
-        fulfilled = add_shift_request_soft(model, x, {1: two_day_dates})
+        fulfilled = add_shift_request_soft(model, x, {1: [(d, ShiftType.day_off) for d in two_day_dates]})
         assert len(fulfilled) == 2
 
     def test_maximizing_fulfills(self, two_day_dates: list[datetime.date]) -> None:
         model, x = make_model_and_vars([1], two_day_dates)
         add_one_shift_per_day(model, x, [1], two_day_dates)
-        fulfilled = add_shift_request_soft(model, x, {1: [two_day_dates[0]]})
+        fulfilled = add_shift_request_soft(model, x, {1: [(two_day_dates[0], ShiftType.day_off)]})
         model.maximize(sum(fulfilled))
         solver = assert_feasible(model)
         assert solver.value(x[1][str(two_day_dates[0])][ShiftType.day_off]) == 1

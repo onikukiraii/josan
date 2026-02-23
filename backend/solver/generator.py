@@ -25,6 +25,7 @@ from solver.constraints import (
     add_night_then_off,
     add_off_day_count,
     add_one_shift_per_day,
+    add_paid_leave_only_requested,
     add_rookie_ward_constraint,
     add_shift_request_hard,
     add_shift_request_soft,
@@ -258,6 +259,7 @@ def generate_shift(db: Session, year_month: str) -> tuple[list[dict[str, object]
         part_time_ids,
     )
     add_shift_request_hard(model, x, request_map)
+    add_paid_leave_only_requested(model, x, member_ids, dates, request_map)
 
     night_diff = add_night_equalization(model, x, member_ids, dates)
     holiday_diff = add_holiday_equalization(model, x, member_ids, dates)
@@ -291,6 +293,7 @@ def generate_shift(db: Session, year_month: str) -> tuple[list[dict[str, object]
         )
 
         fulfilled_vars = add_shift_request_soft(model, x, request_map)
+        add_paid_leave_only_requested(model, x, member_ids, dates, request_map)
         night_diff = add_night_equalization(model, x, member_ids, dates)
         holiday_diff = add_holiday_equalization(model, x, member_ids, dates)
         if early:

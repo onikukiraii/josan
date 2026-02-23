@@ -234,6 +234,27 @@ def add_shift_request_hard(
             model.add(x[m][str(d)][shift_type] == 1)
 
 
+def add_paid_leave_only_requested(
+    model: cp_model.CpModel,
+    x: VarDict,
+    member_ids: list[int],
+    dates: list[datetime.date],
+    request_map: dict[int, list[tuple[datetime.date, ShiftType]]],
+) -> None:
+    """H13: 有給は希望した日のみ使用可能。希望がない日の paid_leave を 0 に固定"""
+    paid_leave_dates: dict[int, set[str]] = {}
+    for m, entries in request_map.items():
+        for d, shift_type in entries:
+            if shift_type == ShiftType.paid_leave:
+                paid_leave_dates.setdefault(m, set()).add(str(d))
+    for m in member_ids:
+        allowed = paid_leave_dates.get(m, set())
+        for d in dates:
+            ds = str(d)
+            if ds not in allowed:
+                model.add(x[m][ds][ShiftType.paid_leave] == 0)
+
+
 def add_rookie_ward_constraint(
     model: cp_model.CpModel,
     x: VarDict,

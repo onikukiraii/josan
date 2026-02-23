@@ -21,7 +21,6 @@ from response.schedule import (
     ShiftAssignmentResult,
     UnfulfilledRequest,
 )
-from solver.config import OFF_DAY_TYPES
 from solver.validators import check_assignment_warnings
 
 router = APIRouter(prefix="/schedules", tags=["schedules"])
@@ -281,7 +280,7 @@ def get_schedule_summary(schedule_id: int, db: Session = Depends(get_db)) -> Sch
     member_summaries: list[MemberSummary] = []
     for member in members:
         member_assignments = [a for a in assignments if a.member_id == member.id]
-        working = [a for a in member_assignments if a.shift_type not in OFF_DAY_TYPES]
+        working = [a for a in member_assignments if a.shift_type != ShiftType.day_off]
         day_offs = [a for a in member_assignments if a.shift_type == ShiftType.day_off]
         paid_leaves = [a for a in member_assignments if a.shift_type == ShiftType.paid_leave]
         nights = [a for a in member_assignments if a.shift_type in NIGHT_SHIFTS]
