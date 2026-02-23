@@ -215,6 +215,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/schedules/{schedule_id}/assignments/{assignment_id}/early": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Toggle Early Shift */
+        patch: operations["toggle_early_shift_schedules__schedule_id__assignments__assignment_id__early_patch"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -223,7 +240,7 @@ export interface components {
          * CapabilityType
          * @enum {string}
          */
-        CapabilityType: "outpatient_leader" | "ward_leader" | "night_leader" | "day_shift" | "night_shift" | "beauty" | "mw_outpatient" | "ward_staff" | "rookie";
+        CapabilityType: "outpatient_leader" | "ward_leader" | "night_leader" | "day_shift" | "night_shift" | "beauty" | "mw_outpatient" | "ward_staff" | "rookie" | "early_shift";
         /**
          * EmploymentType
          * @enum {string}
@@ -303,6 +320,11 @@ export interface components {
             night_shift_count: number;
             /** 日祝出勤数 */
             holiday_work_count: number;
+            /**
+             * 早番回数
+             * @default 0
+             */
+            early_shift_count: number;
             /** 希望休充足数 */
             request_fulfilled: number;
             /** 希望休合計 */
@@ -442,6 +464,11 @@ export interface components {
             date: string;
             /** シフト種別 */
             shift_type: components["schemas"]["ShiftType"];
+            /**
+             * 早番
+             * @default false
+             */
+            is_early: boolean;
             /**
              * Created At
              * Format: date-time
@@ -1106,6 +1133,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    toggle_early_shift_schedules__schedule_id__assignments__assignment_id__early_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                schedule_id: number;
+                assignment_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShiftAssignmentResponse"];
                 };
             };
             /** @description Validation Error */

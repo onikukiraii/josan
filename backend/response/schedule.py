@@ -12,6 +12,7 @@ class ShiftAssignmentResponse(BaseModel):
     member_name: str = Field(title="メンバー名")
     date: dt.date = Field(title="日付")
     shift_type: ShiftType = Field(title="シフト種別")
+    is_early: bool = Field(default=False, title="早番")
     created_at: dt.datetime
 
     model_config = {"from_attributes": True}
@@ -41,6 +42,7 @@ class MemberSummary(BaseModel):
     day_off_count: int = Field(title="公休数")
     night_shift_count: int = Field(title="夜勤回数")
     holiday_work_count: int = Field(title="日祝出勤数")
+    early_shift_count: int = Field(default=0, title="早番回数")
     request_fulfilled: int = Field(title="希望休充足数")
     request_total: int = Field(title="希望休合計")
     request_dates: list[dt.date] = Field(title="希望休日付")

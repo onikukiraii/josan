@@ -278,6 +278,67 @@ def add_sunday_holiday_ward_only(
                         model.add(x[m][ds][s] == 0)
 
 
+def add_early_shift_constraint(
+    model: cp_model.CpModel,
+    x: VarDict,
+    member_ids: list[int],
+    dates: list[datetime.date],
+    member_capabilities: dict[int, set[CapabilityType]],
+) -> dict[int, dict[str, cp_model.IntVar]] | None:
+    """H15: 平日に早番可能メンバーから1名を早番配置"""
+    early_capable = [m for m in member_ids if CapabilityType.early_shift in member_capabilities.get(m, set())]
+    if not early_capable:
+        return None
+
+    early: dict[int, dict[str, cp_model.IntVar]] = {}
+    for m in early_capable:
+        early[m] = {}
+        for d in dates:
+            ds = str(d)
+            early[m][ds] = model.new_bool_var(f"early_{m}_{ds}")
+
+    for d in dates:
+        ds = str(d)
+        day_type = get_day_type(d)
+
+        if day_type == DayType.weekday:
+            # 平日: 早番対象者から1名
+            model.add_exactly_one(early[m][ds] for m in early_capable)
+            # 早番者はその日に日勤系シフトに配置されていること
+            for m in early_capable:
+                day_shift_vars = [x[m][ds][s] for s in DAY_SHIFT_TYPES]
+                model.add(sum(day_shift_vars) >= 1).only_enforce_if(early[m][ds])
+        else:
+            # 土日祝: 早番なし
+            for m in early_capable:
+                model.add(early[m][ds] == 0)
+
+    return early
+
+
+def add_early_equalization(
+    model: cp_model.CpModel,
+    early: dict[int, dict[str, cp_model.IntVar]],
+    dates: list[datetime.date],
+) -> cp_model.IntVar:
+    """S4: 早番回数の均等化。max-min差を返す"""
+    early_member_ids = list(early.keys())
+    early_counts = []
+    for m in early_member_ids:
+        count = model.new_int_var(0, len(dates), f"early_count_{m}")
+        model.add(count == sum(early[m][str(d)] for d in dates))
+        early_counts.append(count)
+
+    max_early = model.new_int_var(0, len(dates), "max_early")
+    min_early = model.new_int_var(0, len(dates), "min_early")
+    model.add_max_equality(max_early, early_counts)
+    model.add_min_equality(min_early, early_counts)
+
+    diff = model.new_int_var(0, len(dates), "early_diff")
+    model.add(diff == max_early - min_early)
+    return diff
+
+
 def add_shift_request_soft(
     model: cp_model.CpModel,
     x: VarDict,

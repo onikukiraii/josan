@@ -179,6 +179,15 @@ export const schedulesApi = {
     })
     return unwrap<ScheduleSummaryResponse>(res)
   },
+  toggleEarly: async (scheduleId: number, assignmentId: number) => {
+    const res = await api.PATCH(
+      '/schedules/{schedule_id}/assignments/{assignment_id}/early',
+      {
+        params: { path: { schedule_id: scheduleId, assignment_id: assignmentId } },
+      },
+    )
+    return unwrap<ShiftAssignmentResponse>(res)
+  },
   pdfUrl: (scheduleId: number) =>
     `${BASE_URL}/schedules/${scheduleId}/pdf`,
 }

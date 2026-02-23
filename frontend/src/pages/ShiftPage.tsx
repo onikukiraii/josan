@@ -176,7 +176,7 @@ export function ShiftPage() {
           ),
         }
       })
-      for (const w of result.warnings) {
+      for (const w of result.warnings ?? []) {
         toast.warning(w)
       }
       const summaryData = await schedulesApi.summary(schedule.id)
@@ -223,13 +223,33 @@ export function ShiftPage() {
           assignments: [...prev.assignments, result.assignment],
         }
       })
-      for (const w of result.warnings) {
+      for (const w of result.warnings ?? []) {
         toast.warning(w)
       }
       const summaryData = await schedulesApi.summary(schedule.id)
       setSummary(summaryData)
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'シフトの追加に失敗しました')
+    }
+  }, [schedule])
+
+  const handleEarlyToggle = useCallback(async (assignmentId: number) => {
+    if (!schedule) return
+    try {
+      const updated = await schedulesApi.toggleEarly(schedule.id, assignmentId)
+      setSchedule((prev) => {
+        if (!prev) return prev
+        return {
+          ...prev,
+          assignments: prev.assignments.map((a) =>
+            a.id === updated.id ? updated : a,
+          ),
+        }
+      })
+      const summaryData = await schedulesApi.summary(schedule.id)
+      setSummary(summaryData)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : '早番の切り替えに失敗しました')
     }
   }, [schedule])
 
@@ -370,12 +390,23 @@ export function ShiftPage() {
                                     <DropdownMenuTrigger asChild>
                                       <button
                                         type="button"
-                                        className="w-full px-1 py-0.5 rounded text-xs cursor-pointer hover:bg-brand-50 transition-colors text-warm-gray-900 font-medium max-w-16 truncate block mx-auto"
+                                        className="w-full px-1 py-0.5 rounded text-xs cursor-pointer hover:bg-brand-50 transition-colors text-warm-gray-900 font-medium max-w-20 block mx-auto flex items-center justify-center gap-0.5"
                                       >
-                                        {assignment.member_name}
+                                        <span className="truncate">{assignment.member_name}</span>
+                                        {assignment.is_early && (
+                                          <span className="ml-0.5 inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700 border border-amber-200 text-[8px] font-bold">
+                                            早
+                                          </span>
+                                        )}
                                       </button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="start" className="max-h-64 overflow-y-auto">
+                                      <DropdownMenuItem
+                                        onClick={() => handleEarlyToggle(assignment.id)}
+                                      >
+                                        {assignment.is_early ? '早番を外す' : '早番にする'}
+                                      </DropdownMenuItem>
+                                      <DropdownMenuSeparator />
                                       <DropdownMenuItem
                                         onClick={() => handleAssignmentDelete(assignment.id)}
                                         className="text-warm-gray-400"
@@ -458,6 +489,7 @@ export function ShiftPage() {
                       <TableHead className="font-semibold text-brand-800 text-center">勤務日数</TableHead>
                       <TableHead className="font-semibold text-brand-800 text-center">公休</TableHead>
                       <TableHead className="font-semibold text-brand-800 text-center">夜勤回数</TableHead>
+                      <TableHead className="font-semibold text-brand-800 text-center">早番</TableHead>
                       <TableHead className="font-semibold text-brand-800 text-center">日祝出勤</TableHead>
                       <TableHead className="font-semibold text-brand-800 text-center">希望休</TableHead>
                     </TableRow>
@@ -502,6 +534,9 @@ export function ShiftPage() {
                           </TableCell>
                           <TableCell className="text-center text-warm-gray-700">
                             {ms.night_shift_count}
+                          </TableCell>
+                          <TableCell className="text-center text-warm-gray-700">
+                            {ms.early_shift_count}
                           </TableCell>
                           <TableCell className="text-center text-warm-gray-700">
                             {ms.holiday_work_count}

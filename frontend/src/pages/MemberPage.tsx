@@ -44,6 +44,7 @@ const ALL_CAPABILITIES: CapabilityType[] = [
   'mw_outpatient',
   'ward_staff',
   'rookie',
+  'early_shift',
 ]
 
 const QUALIFICATIONS: Qualification[] = ['nurse', 'associate_nurse', 'midwife']

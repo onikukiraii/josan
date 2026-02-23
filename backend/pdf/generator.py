@@ -79,9 +79,11 @@ def generate_schedule_pdf(
         ds = str(a["date"])
         st = a["shift_type"]
         name = str(a["member_name"])
+        is_early = bool(a.get("is_early", False))
         if st == ShiftType.day_off:
             continue
-        date_shift_map.setdefault(ds, {}).setdefault(st, []).append(name)
+        display_name = f"★{name}" if is_early else name
+        date_shift_map.setdefault(ds, {}).setdefault(st, []).append(display_name)
 
     # 日付リストを作成
     import calendar

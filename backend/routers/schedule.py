@@ -36,6 +36,7 @@ def _assignment_to_response(a: ShiftAssignment) -> ShiftAssignmentResponse:
         member_name=a.member.name,
         date=a.date,
         shift_type=a.shift_type,
+        is_early=a.is_early,
         created_at=a.created_at,
     )
 
@@ -92,6 +93,7 @@ def generate_schedule(params: ScheduleGenerateParams, db: Session = Depends(get_
                 member_id=a["member_id"],
                 date=a["date"],
                 shift_type=a["shift_type"],
+                is_early=a.get("is_early", False),
             )
         )
 
@@ -271,6 +273,7 @@ def get_schedule_summary(schedule_id: int, db: Session = Depends(get_db)) -> Sch
         working = [a for a in member_assignments if a.shift_type != ShiftType.day_off]
         day_offs = [a for a in member_assignments if a.shift_type == ShiftType.day_off]
         nights = [a for a in member_assignments if a.shift_type in NIGHT_SHIFTS]
+        early_shifts = [a for a in member_assignments if a.is_early]
         holidays = [a for a in working if a.date.weekday() == 6]  # Sunday
 
         req_dates = request_dates_by_member.get(member.id, [])
@@ -286,6 +289,7 @@ def get_schedule_summary(schedule_id: int, db: Session = Depends(get_db)) -> Sch
                 working_days=len(working),
                 day_off_count=len(day_offs),
                 night_shift_count=len(nights),
+                early_shift_count=len(early_shifts),
                 holiday_work_count=len(holidays),
                 request_fulfilled=fulfilled,
                 request_total=len(req_dates_set),
@@ -319,6 +323,7 @@ def get_schedule_pdf(schedule_id: int, db: Session = Depends(get_db)) -> Streami
             "member_name": a.member.name,
             "date": a.date,
             "shift_type": a.shift_type,
+            "is_early": a.is_early,
         }
         for a in schedule.assignments
     ]
@@ -330,3 +335,24 @@ def get_schedule_pdf(schedule_id: int, db: Session = Depends(get_db)) -> Streami
         media_type="application/pdf",
         headers={"Content-Disposition": f'attachment; filename="shift_{schedule.year_month}.pdf"'},
     )
+
+
+@router.patch("/{schedule_id}/assignments/{assignment_id}/early", response_model=ShiftAssignmentResponse)
+def toggle_early_shift(
+    schedule_id: int,
+    assignment_id: int,
+    db: Session = Depends(get_db),
+) -> ShiftAssignmentResponse:
+    assignment = (
+        db.query(ShiftAssignment)
+        .options(joinedload(ShiftAssignment.member))
+        .filter(ShiftAssignment.id == assignment_id, ShiftAssignment.schedule_id == schedule_id)
+        .first()
+    )
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+
+    assignment.is_early = not assignment.is_early
+    db.commit()
+    db.refresh(assignment)
+    return _assignment_to_response(assignment)

@@ -13,6 +13,8 @@ from solver.config import ALL_SHIFT_TYPES, get_base_off_days, get_month_dates
 from solver.constraints import (
     add_capability_constraints,
     add_day_shift_eligibility,
+    add_early_equalization,
+    add_early_shift_constraint,
     add_holiday_equalization,
     add_max_consecutive_work,
     add_ng_pair_constraint,
@@ -46,6 +48,7 @@ CONSTRAINT_LABELS: dict[str, str] = {
     "H11": "公休日数の制約",
     "H13": "新人の病棟5名体制",
     "H14": "日祝は病棟系のみ稼働",
+    "H15": "平日に早番1名配置",
 }
 
 
@@ -128,7 +131,7 @@ def _add_hard_constraints(
     rookie_ids: list[int],
     part_time_ids: set[int] | None = None,
     skip_constraints: set[str] | None = None,
-) -> None:
+) -> dict[int, dict[str, cp_model.IntVar]] | None:
     skip = skip_constraints or set()
 
     # H1-H5 は基本制約（常に適用）
@@ -154,6 +157,11 @@ def _add_hard_constraints(
         add_sunday_holiday_ward_only(model, x, member_ids, dates)
     if rookie_ids and "H13" not in skip:
         add_rookie_ward_constraint(model, x, member_ids, dates, rookie_ids, member_capabilities)
+
+    early = None
+    if "H15" not in skip:
+        early = add_early_shift_constraint(model, x, member_ids, dates, member_capabilities)
+    return early
 
 
 def _diagnose_by_relaxation(
@@ -234,7 +242,7 @@ def generate_shift(db: Session, year_month: str) -> tuple[list[dict[str, object]
     # Step 1: 希望休をハード制約
     model = cp_model.CpModel()
     x = _create_variables(model, member_ids, dates)
-    _add_hard_constraints(
+    early = _add_hard_constraints(
         model,
         x,
         member_ids,
@@ -252,7 +260,8 @@ def generate_shift(db: Session, year_month: str) -> tuple[list[dict[str, object]
 
     night_diff = add_night_equalization(model, x, member_ids, dates)
     holiday_diff = add_holiday_equalization(model, x, member_ids, dates)
-    model.minimize(night_diff * 10 + holiday_diff * 5)
+    early_diff = add_early_equalization(model, early, dates) if early else model.new_int_var(0, 0, "early_diff_zero")
+    model.minimize(night_diff * 10 + holiday_diff * 5 + early_diff * 3)
 
     solver = cp_model.CpSolver()
     solver.parameters.max_time_in_seconds = SOLVER_TIMEOUT_SECONDS
@@ -265,7 +274,7 @@ def generate_shift(db: Session, year_month: str) -> tuple[list[dict[str, object]
         # Step 2: 希望休をソフト制約
         model = cp_model.CpModel()
         x = _create_variables(model, member_ids, dates)
-        _add_hard_constraints(
+        early = _add_hard_constraints(
             model,
             x,
             member_ids,
@@ -283,8 +292,12 @@ def generate_shift(db: Session, year_month: str) -> tuple[list[dict[str, object]
         fulfilled_vars = add_shift_request_soft(model, x, request_map)
         night_diff = add_night_equalization(model, x, member_ids, dates)
         holiday_diff = add_holiday_equalization(model, x, member_ids, dates)
+        if early:
+            early_diff = add_early_equalization(model, early, dates)
+        else:
+            early_diff = model.new_int_var(0, 0, "early_diff_zero_s2")
 
-        model.maximize(sum(fulfilled_vars) * 100 - night_diff * 10 - holiday_diff * 5)
+        model.maximize(sum(fulfilled_vars) * 100 - night_diff * 10 - holiday_diff * 5 - early_diff * 3)
 
         solver = cp_model.CpSolver()
         solver.parameters.max_time_in_seconds = SOLVER_TIMEOUT_SECONDS
@@ -351,12 +364,16 @@ def generate_shift(db: Session, year_month: str) -> tuple[list[dict[str, object]
             ds = str(d)
             for s in ALL_SHIFT_TYPES:
                 if solver.value(x[m][ds][s]) == 1:
+                    is_early = False
+                    if early and m in early and solver.value(early[m][ds]) == 1:
+                        is_early = True
                     assignments.append(
                         {
                             "member_id": m,
                             "member_name": member_name_map.get(m, ""),
                             "date": ds,
                             "shift_type": s,
+                            "is_early": is_early,
                         }
                     )
                     break

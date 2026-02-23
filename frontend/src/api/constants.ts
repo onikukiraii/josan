@@ -81,6 +81,7 @@ export const CAPABILITY_LABEL: Record<CapabilityType, string> = {
   mw_outpatient: '助産師外来',
   ward_staff: '病棟',
   rookie: '新人',
+  early_shift: '早番',
 }
 
 export const SHIFT_TYPE_LABEL: Record<ShiftType, string> = {

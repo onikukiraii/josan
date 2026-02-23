@@ -32,6 +32,7 @@ class CapabilityType(str, enum.Enum):
     mw_outpatient = "mw_outpatient"
     ward_staff = "ward_staff"
     rookie = "rookie"
+    early_shift = "early_shift"
 
     @property
     def label(self) -> str:
@@ -45,6 +46,7 @@ class CapabilityType(str, enum.Enum):
             "mw_outpatient": "助産師外来",
             "ward_staff": "病棟",
             "rookie": "新人",
+            "early_shift": "早番",
         }
         return labels[self.value]
 
