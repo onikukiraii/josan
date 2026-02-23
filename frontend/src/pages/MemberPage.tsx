@@ -10,7 +10,9 @@ import type {
 } from '@/api/constants'
 import {
   QUALIFICATION_LABEL,
+  QUALIFICATION_BADGE,
   EMPLOYMENT_TYPE_LABEL,
+  EMPLOYMENT_TYPE_BADGE_CLASS,
   CAPABILITY_LABEL,
   compareMemberForDisplay,
 } from '@/api/constants'
@@ -205,20 +207,18 @@ export function MemberPage() {
           <Table>
             <TableHeader>
               <TableRow className="bg-brand-50/60">
-                <TableHead className="w-[140px]">名前</TableHead>
-                <TableHead className="w-[100px]">職能</TableHead>
-                <TableHead className="w-[100px]">雇用形態</TableHead>
-                <TableHead className="w-[100px]">夜勤上限</TableHead>
-                <TableHead>能力</TableHead>
-                <TableHead className="w-[180px] text-right">アクション</TableHead>
+                <TableHead className="w-[140px] text-left">名前</TableHead>
+                <TableHead className="w-[80px] text-left">雇用</TableHead>
+                <TableHead className="w-[80px] text-left">夜勤上限</TableHead>
+                <TableHead className="text-center">能力</TableHead>
+                <TableHead className="w-[180px] text-center">アクション</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
-                  <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                  <TableCell><Skeleton className="h-5 w-16" /></TableCell>
-                  <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+                  <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                  <TableCell><Skeleton className="h-5 w-12" /></TableCell>
                   <TableCell><Skeleton className="h-5 w-10" /></TableCell>
                   <TableCell>
                     <div className="flex gap-1">
@@ -243,75 +243,87 @@ export function MemberPage() {
           <Table>
             <TableHeader>
               <TableRow className="bg-brand-50/60">
-                <TableHead className="w-[140px] font-semibold text-brand-800">名前</TableHead>
-                <TableHead className="w-[100px] font-semibold text-brand-800">職能</TableHead>
-                <TableHead className="w-[100px] font-semibold text-brand-800">雇用形態</TableHead>
-                <TableHead className="w-[100px] font-semibold text-brand-800">夜勤上限</TableHead>
-                <TableHead className="font-semibold text-brand-800">能力</TableHead>
-                <TableHead className="w-[180px] text-right font-semibold text-brand-800">アクション</TableHead>
+                <TableHead className="w-[140px] text-left font-semibold text-brand-800">名前</TableHead>
+                <TableHead className="w-[80px] text-left font-semibold text-brand-800">雇用</TableHead>
+                <TableHead className="w-[80px] text-left font-semibold text-brand-800">夜勤上限</TableHead>
+                <TableHead className="text-center font-semibold text-brand-800">能力</TableHead>
+                <TableHead className="w-[180px] text-center font-semibold text-brand-800">アクション</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sortedMembers.map(member => (
-                <TableRow
-                  key={member.id}
-                  className="transition-colors hover:bg-brand-50/30"
-                >
-                  <TableCell className="font-medium text-warm-gray-900">
-                    {member.name}
-                  </TableCell>
-                  <TableCell className="text-warm-gray-600">
-                    {QUALIFICATION_LABEL[member.qualification]}
-                  </TableCell>
-                  <TableCell className="text-warm-gray-600">
-                    {EMPLOYMENT_TYPE_LABEL[member.employment_type]}
-                  </TableCell>
-                  <TableCell className="text-warm-gray-600">
-                    {member.max_night_shifts}回
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {[...member.capabilities].sort((a, b) => ALL_CAPABILITIES.indexOf(a) - ALL_CAPABILITIES.indexOf(b)).map(cap => (
-                        <Badge
-                          key={cap}
-                          variant="secondary"
-                          className="bg-brand-100/80 text-xs text-brand-700 hover:bg-brand-100 rounded-full"
+              {sortedMembers.map(member => {
+                const qBadge = QUALIFICATION_BADGE[member.qualification]
+                return (
+                  <TableRow
+                    key={member.id}
+                    className="transition-colors hover:bg-brand-50/30"
+                  >
+                    <TableCell className="font-medium text-warm-gray-900">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs font-bold ${qBadge.className}`}
+                          title={QUALIFICATION_LABEL[member.qualification]}
                         >
-                          {CAPABILITY_LABEL[cap]}
-                        </Badge>
-                      ))}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openEditDialog(member)}
-                        className="text-warm-gray-600 hover:text-brand-600 hover:bg-brand-50"
+                          {qBadge.char}
+                        </span>
+                        {member.name}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className={`text-xs ${EMPLOYMENT_TYPE_BADGE_CLASS[member.employment_type]}`}
                       >
-                        編集
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleCopy(member)}
-                        className="text-warm-gray-600 hover:text-brand-600 hover:bg-brand-50"
-                      >
-                        コピー
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setDeleteTarget(member)}
-                        className="text-warm-gray-600 hover:text-error"
-                      >
-                        削除
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+                        {EMPLOYMENT_TYPE_LABEL[member.employment_type]}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-warm-gray-600">
+                      {member.max_night_shifts}回
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {[...member.capabilities].sort((a, b) => ALL_CAPABILITIES.indexOf(a) - ALL_CAPABILITIES.indexOf(b)).map(cap => (
+                          <Badge
+                            key={cap}
+                            variant="secondary"
+                            className="bg-brand-100/80 text-xs text-brand-700 hover:bg-brand-100 rounded-full"
+                          >
+                            {CAPABILITY_LABEL[cap]}
+                          </Badge>
+                        ))}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openEditDialog(member)}
+                          className="text-warm-gray-600 hover:text-brand-600 hover:bg-brand-50"
+                        >
+                          編集
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleCopy(member)}
+                          className="text-warm-gray-600 hover:text-brand-600 hover:bg-brand-50"
+                        >
+                          コピー
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setDeleteTarget(member)}
+                          className="text-warm-gray-600 hover:text-error"
+                        >
+                          削除
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
             </TableBody>
           </Table>
         </div>

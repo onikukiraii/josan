@@ -66,9 +66,20 @@ export const QUALIFICATION_LABEL: Record<Qualification, string> = {
   midwife: '助産師',
 }
 
+export const QUALIFICATION_BADGE: Record<Qualification, { char: string; className: string }> = {
+  midwife: { char: '助', className: 'bg-pink-100 text-pink-700 border-pink-200' },
+  nurse: { char: '看', className: 'bg-sky-100 text-sky-700 border-sky-200' },
+  associate_nurse: { char: '准', className: 'bg-stone-100 text-stone-600 border-stone-200' },
+}
+
 export const EMPLOYMENT_TYPE_LABEL: Record<EmploymentType, string> = {
   full_time: '常勤',
   part_time: '非常勤',
+}
+
+export const EMPLOYMENT_TYPE_BADGE_CLASS: Record<EmploymentType, string> = {
+  full_time: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  part_time: 'bg-amber-50 text-amber-700 border-amber-200',
 }
 
 export const CAPABILITY_LABEL: Record<CapabilityType, string> = {
