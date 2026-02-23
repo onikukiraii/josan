@@ -178,7 +178,6 @@ class TestCreateAssignment:
         )
         assert resp.status_code == 201
 
-
     def test_create_assignment_replaces_day_off(
         self,
         client: TestClient,
@@ -205,9 +204,7 @@ class TestCreateAssignment:
 
         # スケジュール全体を取得して day_off が消えていることを確認
         detail = client.get("/schedules/", params={"year_month": "2025-01"}).json()
-        assignments_on_day = [
-            a for a in detail["assignments"] if a["date"] == "2025-01-10" and a["member_id"] == m.id
-        ]
+        assignments_on_day = [a for a in detail["assignments"] if a["date"] == "2025-01-10" and a["member_id"] == m.id]
         assert len(assignments_on_day) == 1
         assert assignments_on_day[0]["shift_type"] == "ward"
 

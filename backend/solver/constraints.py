@@ -204,6 +204,26 @@ def add_night_shift_limit(
         model.add(sum(night_vars) <= max_n)
 
 
+def add_night_shift_minimum(
+    model: cp_model.CpModel,
+    x: VarDict,
+    member_ids: list[int],
+    dates: list[datetime.date],
+    member_min_nights: dict[int, int],
+) -> None:
+    """H16: 夜勤回数 >= 個人の確定回数"""
+    for m in member_ids:
+        min_n = member_min_nights.get(m, 0)
+        if min_n <= 0:
+            continue
+        night_vars = []
+        for d in dates:
+            ds = str(d)
+            for ns in NIGHT_SHIFT_TYPES:
+                night_vars.append(x[m][ds][ns])
+        model.add(sum(night_vars) >= min_n)
+
+
 def add_off_day_count(
     model: cp_model.CpModel,
     x: VarDict,

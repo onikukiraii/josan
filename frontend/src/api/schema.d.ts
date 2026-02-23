@@ -310,6 +310,11 @@ export interface components {
              */
             max_night_shifts: number;
             /**
+             * 夜勤確定回数
+             * @default 0
+             */
+            min_night_shifts: number;
+            /**
              * 能力
              * @default []
              */
@@ -327,6 +332,8 @@ export interface components {
             employment_type: components["schemas"]["EmploymentType"];
             /** 夜勤上限 */
             max_night_shifts: number;
+            /** 夜勤確定回数 */
+            min_night_shifts: number;
             /** 夜勤控除残高 */
             night_shift_deduction_balance: number;
             /** 能力 */
@@ -385,6 +392,8 @@ export interface components {
             employment_type?: components["schemas"]["EmploymentType"] | null;
             /** 夜勤上限 */
             max_night_shifts?: number | null;
+            /** 夜勤確定回数 */
+            min_night_shifts?: number | null;
             /** 能力 */
             capabilities?: components["schemas"]["CapabilityType"][] | null;
         };

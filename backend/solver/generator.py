@@ -22,6 +22,7 @@ from solver.constraints import (
     add_night_midwife_constraint,
     add_night_shift_eligibility,
     add_night_shift_limit,
+    add_night_shift_minimum,
     add_night_then_off,
     add_off_day_count,
     add_one_shift_per_day,
@@ -50,6 +51,7 @@ CONSTRAINT_LABELS: dict[str, str] = {
     "H13": "新人の病棟5名体制",
     "H14": "日祝は病棟系のみ稼働",
     "H15": "平日に早番1名配置",
+    "H16": "夜勤確定回数（最低保証）",
 }
 
 
@@ -59,6 +61,7 @@ def _load_data(
     list[Member],
     dict[int, set[CapabilityType]],
     dict[int, Qualification],
+    dict[int, int],
     dict[int, int],
     list[tuple[int, int]],
     dict[int, list[tuple[datetime.date, ShiftType]]],
@@ -72,6 +75,7 @@ def _load_data(
 
     member_qualifications: dict[int, Qualification] = {m.id: m.qualification for m in members}
     member_max_nights: dict[int, int] = {m.id: m.max_night_shifts for m in members}
+    member_min_nights: dict[int, int] = {m.id: m.min_night_shifts for m in members}
 
     ng_pairs_raw = db.query(NgPair).all()
     ng_pairs = [(p.member_id_1, p.member_id_2) for p in ng_pairs_raw]
@@ -97,6 +101,7 @@ def _load_data(
         member_capabilities,
         member_qualifications,
         member_max_nights,
+        member_min_nights,
         ng_pairs,
         request_map,
         pediatric_dates,
@@ -127,6 +132,7 @@ def _add_hard_constraints(
     member_capabilities: dict[int, set[CapabilityType]],
     member_qualifications: dict[int, Qualification],
     member_max_nights: dict[int, int],
+    member_min_nights: dict[int, int],
     member_off_days: dict[int, int],
     ng_pairs: list[tuple[int, int]],
     pediatric_dates: set[datetime.date],
@@ -159,6 +165,8 @@ def _add_hard_constraints(
         add_sunday_holiday_ward_only(model, x, member_ids, dates)
     if rookie_ids and "H13" not in skip:
         add_rookie_ward_constraint(model, x, member_ids, dates, rookie_ids, member_capabilities)
+    if "H16" not in skip:
+        add_night_shift_minimum(model, x, member_ids, dates, member_min_nights)
 
     early = None
     if "H15" not in skip:
@@ -172,6 +180,7 @@ def _diagnose_by_relaxation(
     member_capabilities: dict[int, set[CapabilityType]],
     member_qualifications: dict[int, Qualification],
     member_max_nights: dict[int, int],
+    member_min_nights: dict[int, int],
     member_off_days: dict[int, int],
     ng_pairs: list[tuple[int, int]],
     pediatric_dates: set[datetime.date],
@@ -195,6 +204,7 @@ def _diagnose_by_relaxation(
             member_capabilities,
             member_qualifications,
             member_max_nights,
+            member_min_nights,
             member_off_days,
             ng_pairs,
             pediatric_dates,
@@ -216,9 +226,16 @@ def _diagnose_by_relaxation(
 
 def generate_shift(db: Session, year_month: str) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
     """シフトを生成する。(assignments, unfulfilled_requests)を返す。"""
-    members, member_capabilities, member_qualifications, member_max_nights, ng_pairs, request_map, pediatric_dates = (
-        _load_data(db, year_month)
-    )
+    (
+        members,
+        member_capabilities,
+        member_qualifications,
+        member_max_nights,
+        member_min_nights,
+        ng_pairs,
+        request_map,
+        pediatric_dates,
+    ) = _load_data(db, year_month)
 
     dates = get_month_dates(year_month)
     member_ids = [m.id for m in members]
@@ -252,6 +269,7 @@ def generate_shift(db: Session, year_month: str) -> tuple[list[dict[str, object]
         member_capabilities,
         member_qualifications,
         member_max_nights,
+        member_min_nights,
         member_off_days,
         ng_pairs,
         pediatric_dates,
@@ -285,6 +303,7 @@ def generate_shift(db: Session, year_month: str) -> tuple[list[dict[str, object]
             member_capabilities,
             member_qualifications,
             member_max_nights,
+            member_min_nights,
             member_off_days,
             ng_pairs,
             pediatric_dates,
@@ -329,6 +348,7 @@ def generate_shift(db: Session, year_month: str) -> tuple[list[dict[str, object]
                     member_capabilities,
                     member_qualifications,
                     member_max_nights,
+                    member_min_nights,
                     member_off_days,
                     ng_pairs,
                     pediatric_dates,

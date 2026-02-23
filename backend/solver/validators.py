@@ -25,16 +25,13 @@ def check_assignment_warnings(
     if not member:
         return warnings
 
-    assignments = (
-        db.query(ShiftAssignment)
-        .filter(ShiftAssignment.schedule_id == schedule_id)
-        .all()
-    )
+    assignments = db.query(ShiftAssignment).filter(ShiftAssignment.schedule_id == schedule_id).all()
 
     warnings.extend(_check_h6_night_rest(assignments, member, date))
     warnings.extend(_check_h8_night_midwife(assignments, member, date))
     warnings.extend(_check_h9_consecutive_work(assignments, member, date))
     warnings.extend(_check_h10_night_limit(assignments, member))
+    warnings.extend(_check_h16_night_minimum(assignments, member))
 
     return warnings
 
@@ -83,9 +80,7 @@ def _check_h8_night_midwife(
     if today_shift not in NIGHT_SHIFT_TYPES:
         return []
 
-    night_member_ids = {
-        a.member_id for a in assignments if a.date == date and a.shift_type in NIGHT_SHIFT_TYPES
-    }
+    night_member_ids = {a.member_id for a in assignments if a.date == date and a.shift_type in NIGHT_SHIFT_TYPES}
     # 夜勤メンバーに助産師が含まれるか
     has_midwife = any(
         a.member.qualification == Qualification.midwife
@@ -133,10 +128,22 @@ def _check_h10_night_limit(
     member: Member,
 ) -> list[str]:
     """H10: 夜勤月間上限."""
-    night_count = sum(
-        1 for a in assignments if a.member_id == member.id and a.shift_type in NIGHT_SHIFT_TYPES
-    )
+    night_count = sum(1 for a in assignments if a.member_id == member.id and a.shift_type in NIGHT_SHIFT_TYPES)
     max_nights: int = member.max_night_shifts
     if night_count > max_nights:
         return [f"{member.name} の夜勤回数が {night_count} 回になっています（上限{max_nights}回）"]
+    return []
+
+
+def _check_h16_night_minimum(
+    assignments: list[ShiftAssignment],
+    member: Member,
+) -> list[str]:
+    """H16: 夜勤確定回数."""
+    min_nights: int = member.min_night_shifts
+    if min_nights <= 0:
+        return []
+    night_count = sum(1 for a in assignments if a.member_id == member.id and a.shift_type in NIGHT_SHIFT_TYPES)
+    if night_count < min_nights:
+        return [f"{member.name} の夜勤回数が {night_count} 回になっています（確定{min_nights}回）"]
     return []

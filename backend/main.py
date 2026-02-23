@@ -40,6 +40,7 @@ async def general_exception_handler(request: Request, exc: Exception) -> JSONRes
         content={"detail": "サーバーエラーが発生しました。"},
     )
 
+
 app.include_router(member_router)
 app.include_router(ng_pair_router)
 app.include_router(shift_request_router)

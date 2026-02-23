@@ -51,13 +51,14 @@ const ALL_CAPABILITIES: CapabilityType[] = [
 
 const QUALIFICATIONS: Qualification[] = ['nurse', 'associate_nurse', 'midwife']
 const EMPLOYMENT_TYPES: EmploymentType[] = ['full_time', 'part_time']
-const MAX_NIGHT_SHIFT_OPTIONS = [2, 3, 4, 5, 6]
+const MAX_NIGHT_SHIFT_OPTIONS = [1, 2, 3, 4, 5, 6]
 
 interface FormState {
   name: string
   qualification: Qualification
   employment_type: EmploymentType
   max_night_shifts: number
+  min_night_shifts: number
   capabilities: CapabilityType[]
 }
 
@@ -66,6 +67,7 @@ const INITIAL_FORM: FormState = {
   qualification: 'nurse',
   employment_type: 'full_time',
   max_night_shifts: 4,
+  min_night_shifts: 0,
   capabilities: [],
 }
 
@@ -112,6 +114,7 @@ export function MemberPage() {
       qualification: member.qualification,
       employment_type: member.employment_type,
       max_night_shifts: member.max_night_shifts,
+      min_night_shifts: member.min_night_shifts,
       capabilities: [...member.capabilities],
     })
     setDialogOpen(true)
@@ -128,6 +131,7 @@ export function MemberPage() {
         qualification: form.qualification,
         employment_type: form.employment_type,
         max_night_shifts: form.max_night_shifts,
+        min_night_shifts: form.min_night_shifts,
         capabilities: form.capabilities,
       }
 
@@ -168,6 +172,7 @@ export function MemberPage() {
         qualification: member.qualification,
         employment_type: member.employment_type,
         max_night_shifts: member.max_night_shifts,
+        min_night_shifts: member.min_night_shifts,
         capabilities: [...member.capabilities],
       })
       toast.success('メンバーをコピーしました')
@@ -210,6 +215,7 @@ export function MemberPage() {
                 <TableHead className="w-[140px] text-left">名前</TableHead>
                 <TableHead className="w-[80px] text-left">雇用</TableHead>
                 <TableHead className="w-[80px] text-left">夜勤上限</TableHead>
+                <TableHead className="w-[80px] text-left">確定回数</TableHead>
                 <TableHead className="text-center">能力</TableHead>
                 <TableHead className="w-[180px] text-center">アクション</TableHead>
               </TableRow>
@@ -219,6 +225,7 @@ export function MemberPage() {
                 <TableRow key={i}>
                   <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                   <TableCell><Skeleton className="h-5 w-12" /></TableCell>
+                  <TableCell><Skeleton className="h-5 w-10" /></TableCell>
                   <TableCell><Skeleton className="h-5 w-10" /></TableCell>
                   <TableCell>
                     <div className="flex gap-1">
@@ -246,6 +253,7 @@ export function MemberPage() {
                 <TableHead className="w-[140px] text-left font-semibold text-brand-800">名前</TableHead>
                 <TableHead className="w-[80px] text-left font-semibold text-brand-800">雇用</TableHead>
                 <TableHead className="w-[80px] text-left font-semibold text-brand-800">夜勤上限</TableHead>
+                <TableHead className="w-[80px] text-left font-semibold text-brand-800">確定回数</TableHead>
                 <TableHead className="text-center font-semibold text-brand-800">能力</TableHead>
                 <TableHead className="w-[180px] text-center font-semibold text-brand-800">アクション</TableHead>
               </TableRow>
@@ -279,6 +287,9 @@ export function MemberPage() {
                     </TableCell>
                     <TableCell className="text-warm-gray-600">
                       {member.max_night_shifts}回
+                    </TableCell>
+                    <TableCell className="text-warm-gray-600">
+                      {member.min_night_shifts > 0 ? `${member.min_night_shifts}回` : 'なし'}
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
@@ -399,25 +410,53 @@ export function MemberPage() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label className="text-warm-gray-700">夜勤上限（月あたり）</Label>
-              <Select
-                value={String(form.max_night_shifts)}
-                onValueChange={v =>
-                  setForm(prev => ({ ...prev, max_night_shifts: Number(v) }))
-                }
-              >
-                <SelectTrigger className="w-[120px] focus:ring-brand-500">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {MAX_NIGHT_SHIFT_OPTIONS.map(n => (
-                    <SelectItem key={n} value={String(n)}>
-                      {n}回
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-warm-gray-700">夜勤上限（月あたり）</Label>
+                <Select
+                  value={String(form.max_night_shifts)}
+                  onValueChange={v => {
+                    const newMax = Number(v)
+                    setForm(prev => ({
+                      ...prev,
+                      max_night_shifts: newMax,
+                      min_night_shifts: Math.min(prev.min_night_shifts, newMax),
+                    }))
+                  }}
+                >
+                  <SelectTrigger className="w-[120px] focus:ring-brand-500">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MAX_NIGHT_SHIFT_OPTIONS.map(n => (
+                      <SelectItem key={n} value={String(n)}>
+                        {n}回
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-warm-gray-700">確定回数</Label>
+                <Select
+                  value={String(form.min_night_shifts)}
+                  onValueChange={v =>
+                    setForm(prev => ({ ...prev, min_night_shifts: Number(v) }))
+                  }
+                >
+                  <SelectTrigger className="w-[120px] focus:ring-brand-500">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: form.max_night_shifts + 1 }, (_, i) => i).map(n => (
+                      <SelectItem key={n} value={String(n)}>
+                        {n === 0 ? 'なし' : `${n}回`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="space-y-3">
