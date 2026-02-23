@@ -51,7 +51,7 @@ const ALL_CAPABILITIES: CapabilityType[] = [
 
 const QUALIFICATIONS: Qualification[] = ['nurse', 'associate_nurse', 'midwife']
 const EMPLOYMENT_TYPES: EmploymentType[] = ['full_time', 'part_time']
-const MAX_NIGHT_SHIFT_OPTIONS = [2, 3, 4]
+const MAX_NIGHT_SHIFT_OPTIONS = [2, 3, 4, 5, 6]
 
 interface FormState {
   name: string
