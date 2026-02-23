@@ -112,6 +112,12 @@ export const shiftRequestsApi = {
     })
     return unwrap<ShiftRequestResponse[]>(res)
   },
+  deleteByMember: async (memberId: number, yearMonth: string) => {
+    const res = await api.DELETE('/shift-requests/', {
+      params: { query: { member_id: memberId, year_month: yearMonth } },
+    })
+    unwrap(res)
+  },
 }
 
 // --- Pediatric Doctor Schedules ---
@@ -205,6 +211,12 @@ export const schedulesApi = {
       },
     )
     return unwrap<ShiftAssignmentResponse>(res)
+  },
+  deleteSchedule: async (scheduleId: number) => {
+    const res = await api.DELETE('/schedules/{schedule_id}', {
+      params: { path: { schedule_id: scheduleId } },
+    })
+    unwrap(res)
   },
   pdfUrl: (scheduleId: number) =>
     `${BASE_URL}/schedules/${scheduleId}/pdf`,

@@ -165,6 +165,24 @@ export function MonthlySettingsPage() {
     [pediatricDates, yearMonth, savingCells],
   )
 
+  const handleClearRequests = useCallback(
+    async (memberId: number) => {
+      if (!window.confirm('この人の希望休をすべてクリアしますか？')) return
+      try {
+        await shiftRequestsApi.deleteByMember(memberId, yearMonth)
+        setRequestMap((prev) => {
+          const next = new Map(prev)
+          next.set(memberId, new Map())
+          return next
+        })
+        toast.success('希望休をクリアしました')
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : '希望休のクリアに失敗しました')
+      }
+    },
+    [yearMonth],
+  )
+
   const fullTimeWarnings = useMemo(() => {
     const warnings: { memberId: number; name: string; count: number }[] = []
     for (const member of members) {
@@ -271,6 +289,16 @@ export function MonthlySettingsPage() {
                         <span>{member.name}</span>
                         {member.employment_type === 'part_time' && (
                           <span className="text-[10px] text-warm-gray-400 font-normal">非</span>
+                        )}
+                        {(memberDates.size > 0) && (
+                          <button
+                            type="button"
+                            onClick={() => handleClearRequests(member.id)}
+                            className="ml-auto text-warm-gray-300 hover:text-red-500 transition-colors text-xs leading-none"
+                            title="希望休をクリア"
+                          >
+                            ×
+                          </button>
                         )}
                       </div>
                     </td>

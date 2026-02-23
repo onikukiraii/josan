@@ -151,6 +151,20 @@ export function ShiftPage() {
     }
   }, [yearMonth])
 
+  const handleDelete = useCallback(async () => {
+    if (!schedule) return
+    if (!window.confirm('このシフト表を削除しますか？この操作は取り消せません。')) return
+    try {
+      await schedulesApi.deleteSchedule(schedule.id)
+      setSchedule(null)
+      setSummary(null)
+      setUnfulfilled([])
+      toast.success('シフトを削除しました')
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'シフトの削除に失敗しました')
+    }
+  }, [schedule])
+
   const handlePdfExport = useCallback(() => {
     if (!schedule) return
     window.open(schedulesApi.pdfUrl(schedule.id))
@@ -311,6 +325,14 @@ export function ShiftPage() {
           disabled={!schedule}
         >
           PDF出力
+        </Button>
+        <Button
+          variant="outline"
+          onClick={handleDelete}
+          disabled={!schedule}
+          className="border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700"
+        >
+          削除
         </Button>
       </div>
 

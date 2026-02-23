@@ -33,6 +33,18 @@ def get_shift_requests(year_month: str, db: Session = Depends(get_db)) -> list[S
     return [_to_response(r) for r in requests]
 
 
+@router.delete("/", status_code=204)
+def delete_shift_requests(member_id: int, year_month: str, db: Session = Depends(get_db)) -> None:
+    deleted = (
+        db.query(ShiftRequest)
+        .filter(ShiftRequest.member_id == member_id, ShiftRequest.year_month == year_month)
+        .delete()
+    )
+    if deleted == 0:
+        raise HTTPException(status_code=404, detail="対象の希望休が見つかりません")
+    db.commit()
+
+
 @router.put("/", response_model=list[ShiftRequestResponse])
 def bulk_update_shift_requests(
     params: ShiftRequestBulkParams, db: Session = Depends(get_db)

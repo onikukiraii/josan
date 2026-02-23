@@ -119,6 +119,15 @@ def generate_schedule(params: ScheduleGenerateParams, db: Session = Depends(get_
     )
 
 
+@router.delete("/{schedule_id}", status_code=204)
+def delete_schedule(schedule_id: int, db: Session = Depends(get_db)) -> None:
+    schedule = db.query(Schedule).filter(Schedule.id == schedule_id).first()
+    if not schedule:
+        raise HTTPException(status_code=404, detail="Schedule not found")
+    db.delete(schedule)
+    db.commit()
+
+
 @router.post("/{schedule_id}/assignments", response_model=ShiftAssignmentResult, status_code=201)
 def create_assignment(
     schedule_id: int,
