@@ -88,7 +88,8 @@ export interface paths {
         /** Bulk Update Shift Requests */
         put: operations["bulk_update_shift_requests_shift_requests__put"];
         post?: never;
-        delete?: never;
+        /** Delete Shift Requests */
+        delete: operations["delete_shift_requests_shift_requests__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -141,6 +142,23 @@ export interface paths {
         /** Generate Schedule */
         post: operations["generate_schedule_schedules_generate_post"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/schedules/{schedule_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Schedule */
+        delete: operations["delete_schedule_schedules__schedule_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -232,6 +250,26 @@ export interface paths {
         patch: operations["toggle_early_shift_schedules__schedule_id__assignments__assignment_id__early_patch"];
         trace?: never;
     };
+    "/schedules/{schedule_id}/assignments/{assignment_id}/paid-leave": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Toggle Paid Leave
+         * @description day_off ↔ paid_leave を切替
+         */
+        patch: operations["toggle_paid_leave_schedules__schedule_id__assignments__assignment_id__paid_leave_patch"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -316,6 +354,11 @@ export interface components {
             working_days: number;
             /** 公休数 */
             day_off_count: number;
+            /**
+             * 有給数
+             * @default 0
+             */
+            paid_leave_count: number;
             /** 夜勤回数 */
             night_shift_count: number;
             /** 日祝出勤数 */
@@ -397,6 +440,11 @@ export interface components {
          * @enum {string}
          */
         Qualification: "nurse" | "associate_nurse" | "midwife";
+        /**
+         * RequestType
+         * @enum {string}
+         */
+        RequestType: "day_off" | "paid_leave";
         /** ScheduleGenerateParams */
         ScheduleGenerateParams: {
             /** Year Month */
@@ -494,8 +542,18 @@ export interface components {
             member_id: number;
             /** Year Month */
             year_month: string;
-            /** Dates */
-            dates: string[];
+            /** Entries */
+            entries: components["schemas"]["ShiftRequestDateEntry"][];
+        };
+        /** ShiftRequestDateEntry */
+        ShiftRequestDateEntry: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** @default day_off */
+            request_type: components["schemas"]["RequestType"];
         };
         /** ShiftRequestResponse */
         ShiftRequestResponse: {
@@ -512,6 +570,8 @@ export interface components {
              * Format: date
              */
             date: string;
+            /** 希望種別 */
+            request_type: components["schemas"]["RequestType"];
             /**
              * Created At
              * Format: date-time
@@ -522,7 +582,7 @@ export interface components {
          * ShiftType
          * @enum {string}
          */
-        ShiftType: "outpatient_leader" | "treatment_room" | "beauty" | "mw_outpatient" | "ward_leader" | "ward" | "delivery" | "delivery_charge" | "ward_free" | "outpatient_free" | "night_leader" | "night" | "day_off";
+        ShiftType: "outpatient_leader" | "treatment_room" | "beauty" | "mw_outpatient" | "ward_leader" | "ward" | "delivery" | "delivery_charge" | "ward_free" | "outpatient_free" | "night_leader" | "night" | "day_off" | "paid_leave";
         /** UnfulfilledRequest */
         UnfulfilledRequest: {
             /** メンバーID */
@@ -855,6 +915,36 @@ export interface operations {
             };
         };
     };
+    delete_shift_requests_shift_requests__delete: {
+        parameters: {
+            query: {
+                member_id: number;
+                year_month: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_pediatric_doctor_schedules_pediatric_doctor_schedules__get: {
         parameters: {
             query: {
@@ -971,6 +1061,35 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["GenerateResponse"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_schedule_schedules__schedule_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                schedule_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -1147,6 +1266,38 @@ export interface operations {
         };
     };
     toggle_early_shift_schedules__schedule_id__assignments__assignment_id__early_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                schedule_id: number;
+                assignment_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShiftAssignmentResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    toggle_paid_leave_schedules__schedule_id__assignments__assignment_id__paid_leave_patch: {
         parameters: {
             query?: never;
             header?: never;

@@ -40,6 +40,7 @@ class MemberSummary(BaseModel):
     employment_type: EmploymentType = Field(title="雇用形態")
     working_days: int = Field(title="勤務日数")
     day_off_count: int = Field(title="公休数")
+    paid_leave_count: int = Field(default=0, title="有給数")
     night_shift_count: int = Field(title="夜勤回数")
     holiday_work_count: int = Field(title="日祝出勤数")
     early_shift_count: int = Field(default=0, title="早番回数")

@@ -21,6 +21,7 @@ from response.schedule import (
     ShiftAssignmentResult,
     UnfulfilledRequest,
 )
+from solver.config import OFF_DAY_TYPES
 from solver.validators import check_assignment_warnings
 
 router = APIRouter(prefix="/schedules", tags=["schedules"])
@@ -134,19 +135,19 @@ def create_assignment(
 
     parsed_date = dt.date.fromisoformat(params.date)
 
-    # 同一メンバー・同一日に day_off が存在すれば削除（シフトで置換）
-    existing_day_off = (
+    # 同一メンバー・同一日に day_off/paid_leave が存在すれば削除（シフトで置換）
+    existing_off = (
         db.query(ShiftAssignment)
         .filter(
             ShiftAssignment.schedule_id == schedule_id,
             ShiftAssignment.member_id == params.member_id,
             ShiftAssignment.date == parsed_date,
-            ShiftAssignment.shift_type == ShiftType.day_off,
+            ShiftAssignment.shift_type.in_([ShiftType.day_off, ShiftType.paid_leave]),
         )
         .first()
     )
-    if existing_day_off:
-        db.delete(existing_day_off)
+    if existing_off:
+        db.delete(existing_off)
         db.flush()
 
     # フリー枠（病棟F・外来F）は複数人割り当て可能なので重複チェックをスキップ
@@ -263,23 +264,39 @@ def get_schedule_summary(schedule_id: int, db: Session = Depends(get_db)) -> Sch
     base_off_days = get_base_off_days(days_in_month)
     expected_working_days = days_in_month - base_off_days
 
-    request_dates_by_member: dict[int, list[str]] = {}
+    request_entries_by_member: dict[int, list[tuple[str, str]]] = {}
     for r in requests:
-        request_dates_by_member.setdefault(r.member_id, []).append(str(r.date))
+        rt = r.request_type.value if hasattr(r.request_type, "value") else str(r.request_type)
+        request_entries_by_member.setdefault(r.member_id, []).append((str(r.date), rt))
 
     member_summaries: list[MemberSummary] = []
     for member in members:
         member_assignments = [a for a in assignments if a.member_id == member.id]
-        working = [a for a in member_assignments if a.shift_type != ShiftType.day_off]
+        working = [a for a in member_assignments if a.shift_type not in OFF_DAY_TYPES]
         day_offs = [a for a in member_assignments if a.shift_type == ShiftType.day_off]
+        paid_leaves = [a for a in member_assignments if a.shift_type == ShiftType.paid_leave]
         nights = [a for a in member_assignments if a.shift_type in NIGHT_SHIFTS]
         early_shifts = [a for a in member_assignments if a.is_early]
         holidays = [a for a in working if a.date.weekday() == 6]  # Sunday
 
-        req_dates = request_dates_by_member.get(member.id, [])
-        req_dates_set = set(req_dates)
-        off_dates = {str(a.date) for a in day_offs}
-        fulfilled = len(req_dates_set & off_dates)
+        entries = request_entries_by_member.get(member.id, [])
+        req_dates_set = {d for d, _ in entries}
+
+        # fulfilled: request_type に応じて day_off or paid_leave の存在を確認
+        assignment_map: dict[str, set[str]] = {}
+        for a in member_assignments:
+            st_val = a.shift_type.value if hasattr(a.shift_type, "value") else str(a.shift_type)
+            assignment_map.setdefault(str(a.date), set()).add(st_val)
+
+        fulfilled = 0
+        for d, rt in entries:
+            assigned_types = assignment_map.get(d, set())
+            if rt == "paid_leave":
+                if "paid_leave" in assigned_types:
+                    fulfilled += 1
+            else:
+                if "day_off" in assigned_types:
+                    fulfilled += 1
 
         member_summaries.append(
             MemberSummary(
@@ -288,6 +305,7 @@ def get_schedule_summary(schedule_id: int, db: Session = Depends(get_db)) -> Sch
                 employment_type=member.employment_type,
                 working_days=len(working),
                 day_off_count=len(day_offs),
+                paid_leave_count=len(paid_leaves),
                 night_shift_count=len(nights),
                 early_shift_count=len(early_shifts),
                 holiday_work_count=len(holidays),
@@ -353,6 +371,34 @@ def toggle_early_shift(
         raise HTTPException(status_code=404, detail="Assignment not found")
 
     assignment.is_early = not assignment.is_early
+    db.commit()
+    db.refresh(assignment)
+    return _assignment_to_response(assignment)
+
+
+@router.patch("/{schedule_id}/assignments/{assignment_id}/paid-leave", response_model=ShiftAssignmentResponse)
+def toggle_paid_leave(
+    schedule_id: int,
+    assignment_id: int,
+    db: Session = Depends(get_db),
+) -> ShiftAssignmentResponse:
+    """day_off ↔ paid_leave を切替"""
+    assignment = (
+        db.query(ShiftAssignment)
+        .options(joinedload(ShiftAssignment.member))
+        .filter(ShiftAssignment.id == assignment_id, ShiftAssignment.schedule_id == schedule_id)
+        .first()
+    )
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+
+    if assignment.shift_type == ShiftType.day_off:
+        assignment.shift_type = ShiftType.paid_leave
+    elif assignment.shift_type == ShiftType.paid_leave:
+        assignment.shift_type = ShiftType.day_off
+    else:
+        raise HTTPException(status_code=400, detail="公休または有給のシフトのみ切替可能です")
+
     db.commit()
     db.refresh(assignment)
     return _assignment_to_response(assignment)

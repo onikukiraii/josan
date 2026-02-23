@@ -233,6 +233,26 @@ export function ShiftPage() {
     }
   }, [schedule])
 
+  const handlePaidLeaveToggle = useCallback(async (assignmentId: number) => {
+    if (!schedule) return
+    try {
+      const updated = await schedulesApi.togglePaidLeave(schedule.id, assignmentId)
+      setSchedule((prev) => {
+        if (!prev) return prev
+        return {
+          ...prev,
+          assignments: prev.assignments.map((a) =>
+            a.id === updated.id ? updated : a,
+          ),
+        }
+      })
+      const summaryData = await schedulesApi.summary(schedule.id)
+      setSummary(summaryData)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : '有給の切り替えに失敗しました')
+    }
+  }, [schedule])
+
   const handleEarlyToggle = useCallback(async (assignmentId: number) => {
     if (!schedule) return
     try {
@@ -406,6 +426,13 @@ export function ShiftPage() {
                                       >
                                         {assignment.is_early ? '早番を外す' : '早番にする'}
                                       </DropdownMenuItem>
+                                      {(assignment.shift_type === 'day_off' || assignment.shift_type === 'paid_leave') && (
+                                        <DropdownMenuItem
+                                          onClick={() => handlePaidLeaveToggle(assignment.id)}
+                                        >
+                                          {assignment.shift_type === 'day_off' ? '有給にする' : '公休にする'}
+                                        </DropdownMenuItem>
+                                      )}
                                       <DropdownMenuSeparator />
                                       <DropdownMenuItem
                                         onClick={() => handleAssignmentDelete(assignment.id)}
@@ -488,6 +515,7 @@ export function ShiftPage() {
                       <TableHead className="font-semibold text-brand-800">メンバー</TableHead>
                       <TableHead className="font-semibold text-brand-800 text-center">勤務日数</TableHead>
                       <TableHead className="font-semibold text-brand-800 text-center">公休</TableHead>
+                      <TableHead className="font-semibold text-brand-800 text-center">有給</TableHead>
                       <TableHead className="font-semibold text-brand-800 text-center">夜勤回数</TableHead>
                       <TableHead className="font-semibold text-brand-800 text-center">早番</TableHead>
                       <TableHead className="font-semibold text-brand-800 text-center">日祝出勤</TableHead>
@@ -500,10 +528,15 @@ export function ShiftPage() {
                       const workingDaysShort = isFullTime && ms.working_days < summary.expected_working_days
                       const requestUnfulfilled = ms.request_fulfilled < ms.request_total
 
-                      // Build set of day-off dates for this member
+                      // Build set of day-off and paid-leave dates for this member
                       const dayOffDates = new Set(
                         schedule?.assignments
                           .filter((a) => a.member_id === ms.member_id && a.shift_type === 'day_off')
+                          .map((a) => a.date) ?? [],
+                      )
+                      const paidLeaveDates = new Set(
+                        schedule?.assignments
+                          .filter((a) => a.member_id === ms.member_id && a.shift_type === 'paid_leave')
                           .map((a) => a.date) ?? [],
                       )
 
@@ -533,6 +566,9 @@ export function ShiftPage() {
                             {ms.day_off_count}
                           </TableCell>
                           <TableCell className="text-center text-warm-gray-700">
+                            {ms.paid_leave_count}
+                          </TableCell>
+                          <TableCell className="text-center text-warm-gray-700">
                             {ms.night_shift_count}
                           </TableCell>
                           <TableCell className="text-center text-warm-gray-700">
@@ -550,14 +586,18 @@ export function ShiftPage() {
                                 <div className="flex flex-wrap justify-center gap-0.5 mt-0.5">
                                   {ms.request_dates.map((d) => {
                                     const day = Number(d.split('-')[2])
-                                    const fulfilled = dayOffDates.has(d)
+                                    const fulfilledDayOff = dayOffDates.has(d)
+                                    const fulfilledPaidLeave = paidLeaveDates.has(d)
+                                    const fulfilled = fulfilledDayOff || fulfilledPaidLeave
                                     return (
                                       <span
                                         key={d}
                                         className={`text-[10px] px-1 rounded ${
-                                          fulfilled
-                                            ? 'bg-brand-50 text-brand-700'
-                                            : 'bg-warning-bg text-warning font-medium'
+                                          fulfilledPaidLeave
+                                            ? 'bg-orange-50 text-orange-700'
+                                            : fulfilled
+                                              ? 'bg-brand-50 text-brand-700'
+                                              : 'bg-warning-bg text-warning font-medium'
                                         }`}
                                       >
                                         {day}

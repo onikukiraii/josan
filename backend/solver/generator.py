@@ -4,7 +4,7 @@ import logging
 from ortools.sat.python import cp_model
 from sqlalchemy.orm import Session
 
-from entity.enums import CapabilityType, EmploymentType, Qualification, ShiftType
+from entity.enums import CapabilityType, EmploymentType, Qualification, RequestType, ShiftType
 from entity.member import Member
 from entity.member_capability import MemberCapability
 from entity.ng_pair import NgPair
@@ -60,7 +60,7 @@ def _load_data(
     dict[int, Qualification],
     dict[int, int],
     list[tuple[int, int]],
-    dict[int, list[datetime.date]],
+    dict[int, list[tuple[datetime.date, ShiftType]]],
     set[datetime.date],
 ]:
     members = db.query(Member).order_by(Member.id).all()
@@ -76,9 +76,10 @@ def _load_data(
     ng_pairs = [(p.member_id_1, p.member_id_2) for p in ng_pairs_raw]
 
     requests_raw = db.query(ShiftRequest).filter(ShiftRequest.year_month == year_month).all()
-    request_map: dict[int, list[datetime.date]] = {}
+    request_map: dict[int, list[tuple[datetime.date, ShiftType]]] = {}
     for r in requests_raw:
-        request_map.setdefault(r.member_id, []).append(r.date)
+        shift_type = ShiftType.paid_leave if r.request_type == RequestType.paid_leave else ShiftType.day_off
+        request_map.setdefault(r.member_id, []).append((r.date, shift_type))
 
     from entity.pediatric_doctor_schedule import PediatricDoctorSchedule
 
@@ -345,9 +346,9 @@ def generate_shift(db: Session, year_month: str) -> tuple[list[dict[str, object]
 
         # Step 3: 叶えられなかった希望休を特定
         member_name_map = {m.id: m.name for m in members}
-        for m_id, req_dates in request_map.items():
-            for d in req_dates:
-                if solver.value(x[m_id][str(d)][ShiftType.day_off]) == 0:
+        for m_id, entries in request_map.items():
+            for d, shift_type in entries:
+                if solver.value(x[m_id][str(d)][shift_type]) == 0:
                     unfulfilled.append(
                         {
                             "member_id": m_id,

@@ -1,9 +1,10 @@
 from datetime import UTC, datetime
 
-from sqlalchemy import Column, Date, DateTime, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import Column, Date, DateTime, Enum, ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import relationship
 
 from entity.base import Base
+from entity.enums import RequestType
 
 
 class ShiftRequest(Base):
@@ -13,6 +14,7 @@ class ShiftRequest(Base):
     member_id = Column(Integer, ForeignKey("members.id", ondelete="CASCADE"), nullable=False)
     year_month = Column(String(7), nullable=False)
     date = Column(Date, nullable=False)
+    request_type = Column(Enum(RequestType), nullable=False, default=RequestType.day_off, server_default="day_off")
     created_at = Column(DateTime, default=lambda: datetime.now(UTC))
 
     member = relationship("Member", back_populates="shift_requests")

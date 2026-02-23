@@ -22,12 +22,21 @@ import type {
 
 const BASE_URL = 'http://localhost:8000'
 
-const api = createClient<paths>({ baseUrl: BASE_URL })
+const api = createClient<paths>({
+  baseUrl: BASE_URL,
+  fetch: async (input, init) => {
+    try {
+      return await fetch(input, init)
+    } catch {
+      throw new Error('サーバーとの通信に失敗しました')
+    }
+  },
+})
 
 function unwrap<T>(result: { data?: T; error?: unknown }): T {
   if (result.error !== undefined) {
     const err = result.error as Record<string, unknown>
-    const message = typeof err.detail === 'string' ? err.detail : JSON.stringify(result.error)
+    const message = typeof err.detail === 'string' ? err.detail : 'サーバーエラーが発生しました'
     throw new Error(message)
   }
   return result.data as T
@@ -182,6 +191,15 @@ export const schedulesApi = {
   toggleEarly: async (scheduleId: number, assignmentId: number) => {
     const res = await api.PATCH(
       '/schedules/{schedule_id}/assignments/{assignment_id}/early',
+      {
+        params: { path: { schedule_id: scheduleId, assignment_id: assignmentId } },
+      },
+    )
+    return unwrap<ShiftAssignmentResponse>(res)
+  },
+  togglePaidLeave: async (scheduleId: number, assignmentId: number) => {
+    const res = await api.PATCH(
+      '/schedules/{schedule_id}/assignments/{assignment_id}/paid-leave',
       {
         params: { path: { schedule_id: scheduleId, assignment_id: assignmentId } },
       },

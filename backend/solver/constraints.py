@@ -6,6 +6,7 @@ from entity.enums import CapabilityType, Qualification, ShiftType
 from solver.config import (
     DAY_SHIFT_TYPES,
     NIGHT_SHIFT_TYPES,
+    OFF_DAY_TYPES,
     STAFFING_REQUIREMENTS,
     WARD_SHIFT_TYPES,
     DayType,
@@ -127,13 +128,14 @@ def add_night_then_off(
     member_ids: list[int],
     dates: list[datetime.date],
 ) -> None:
-    """H6: 夜勤翌日は必ず休み"""
+    """H6: 夜勤翌日は必ず休み（公休または有給）"""
     for m in member_ids:
         for i in range(len(dates) - 1):
             d_today = str(dates[i])
             d_tomorrow = str(dates[i + 1])
+            off_tomorrow = sum(x[m][d_tomorrow][s] for s in OFF_DAY_TYPES)
             for ns in NIGHT_SHIFT_TYPES:
-                model.add(x[m][d_tomorrow][ShiftType.day_off] >= x[m][d_today][ns])
+                model.add(off_tomorrow >= x[m][d_today][ns])
 
 
 def add_ng_pair_constraint(
@@ -176,11 +178,11 @@ def add_max_consecutive_work(
     member_ids: list[int],
     dates: list[datetime.date],
 ) -> None:
-    """H9: 連続勤務は最大5日"""
+    """H9: 連続勤務は最大5日（公休または有給で休み判定）"""
     for m in member_ids:
         for i in range(len(dates) - 5):
             window = dates[i : i + 6]
-            off_vars = [x[m][str(d)][ShiftType.day_off] for d in window]
+            off_vars = [x[m][str(d)][s] for d in window for s in OFF_DAY_TYPES]
             model.add(sum(off_vars) >= 1)
 
 
@@ -224,12 +226,12 @@ def add_off_day_count(
 def add_shift_request_hard(
     model: cp_model.CpModel,
     x: VarDict,
-    request_map: dict[int, list[datetime.date]],
+    request_map: dict[int, list[tuple[datetime.date, ShiftType]]],
 ) -> None:
-    """H12: 希望休を守る（ハード制約）"""
-    for m, req_dates in request_map.items():
-        for d in req_dates:
-            model.add(x[m][str(d)][ShiftType.day_off] == 1)
+    """H12: 希望休を守る（ハード制約）。request_type に応じて day_off or paid_leave を強制"""
+    for m, entries in request_map.items():
+        for d, shift_type in entries:
+            model.add(x[m][str(d)][shift_type] == 1)
 
 
 def add_rookie_ward_constraint(
@@ -342,13 +344,13 @@ def add_early_equalization(
 def add_shift_request_soft(
     model: cp_model.CpModel,
     x: VarDict,
-    request_map: dict[int, list[datetime.date]],
+    request_map: dict[int, list[tuple[datetime.date, ShiftType]]],
 ) -> list[cp_model.IntVar]:
     """S1: 希望休をソフト制約として追加。叶えた数のリストを返す"""
     fulfilled_vars: list[cp_model.IntVar] = []
-    for m, req_dates in request_map.items():
-        for d in req_dates:
-            fulfilled_vars.append(x[m][str(d)][ShiftType.day_off])
+    for m, entries in request_map.items():
+        for d, shift_type in entries:
+            fulfilled_vars.append(x[m][str(d)][shift_type])
     return fulfilled_vars
 
 
@@ -396,7 +398,7 @@ def add_holiday_equalization(
         work_vars = []
         for d in holiday_dates:
             for s in ShiftType:
-                if s != ShiftType.day_off:
+                if s not in OFF_DAY_TYPES:
                     work_vars.append(x[m][str(d)][s])
         model.add(count == sum(work_vars))
         holiday_counts.append(count)

@@ -17,6 +17,7 @@ def _to_response(req: ShiftRequest) -> ShiftRequestResponse:
         member_name=req.member.name,
         year_month=req.year_month,
         date=req.date,
+        request_type=req.request_type,
         created_at=req.created_at,
     )
 
@@ -45,8 +46,15 @@ def bulk_update_shift_requests(
         ShiftRequest.year_month == params.year_month,
     ).delete()
 
-    for d in params.dates:
-        db.add(ShiftRequest(member_id=params.member_id, year_month=params.year_month, date=d))
+    for entry in params.entries:
+        db.add(
+            ShiftRequest(
+                member_id=params.member_id,
+                year_month=params.year_month,
+                date=entry.date,
+                request_type=entry.request_type,
+            )
+        )
 
     db.commit()
 

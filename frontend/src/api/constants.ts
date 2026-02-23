@@ -7,6 +7,8 @@ export type EmploymentType = components['schemas']['EmploymentType']
 export type CapabilityType = components['schemas']['CapabilityType']
 export type ScheduleStatus = components['schemas']['ScheduleStatus']
 export type ShiftType = components['schemas']['ShiftType']
+export type RequestType = components['schemas']['RequestType']
+export type ShiftRequestDateEntry = components['schemas']['ShiftRequestDateEntry']
 
 export type MemberResponse = components['schemas']['MemberResponse']
 export type NgPairResponse = components['schemas']['NgPairResponse']
@@ -109,4 +111,5 @@ export const SHIFT_TYPE_LABEL: Record<ShiftType, string> = {
   night_leader: '夜L',
   night: '夜勤',
   day_off: '公休',
+  paid_leave: '有給',
 }

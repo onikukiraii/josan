@@ -80,7 +80,7 @@ def generate_schedule_pdf(
         st = a["shift_type"]
         name = str(a["member_name"])
         is_early = bool(a.get("is_early", False))
-        if st == ShiftType.day_off:
+        if st in (ShiftType.day_off, ShiftType.paid_leave):
             continue
         display_name = f"★{name}" if is_early else name
         date_shift_map.setdefault(ds, {}).setdefault(st, []).append(display_name)

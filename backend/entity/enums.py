@@ -75,6 +75,7 @@ class ShiftType(str, enum.Enum):
     night_leader = "night_leader"
     night = "night"
     day_off = "day_off"
+    paid_leave = "paid_leave"
 
     @property
     def label(self) -> str:
@@ -92,5 +93,11 @@ class ShiftType(str, enum.Enum):
             "night_leader": "夜L",
             "night": "夜勤",
             "day_off": "公休",
+            "paid_leave": "有給",
         }
         return labels[self.value]
+
+
+class RequestType(str, enum.Enum):
+    day_off = "day_off"
+    paid_leave = "paid_leave"

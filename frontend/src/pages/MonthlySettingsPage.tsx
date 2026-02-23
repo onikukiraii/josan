@@ -3,7 +3,7 @@ import { toast } from 'sonner'
 import { membersApi } from '@/api/fetcher'
 import { shiftRequestsApi } from '@/api/fetcher'
 import { pediatricApi } from '@/api/fetcher'
-import type { MemberResponse } from '@/api/constants'
+import type { MemberResponse, RequestType } from '@/api/constants'
 import { YearMonthPicker } from '@/components/YearMonthPicker'
 import { useYearMonth } from '@/hooks/useYearMonth'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -29,7 +29,7 @@ function formatDate(date: Date): string {
 export function MonthlySettingsPage() {
   const { yearMonth, setYearMonth } = useYearMonth()
   const [members, setMembers] = useState<MemberResponse[]>([])
-  const [requestMap, setRequestMap] = useState<Map<number, Set<string>>>(new Map())
+  const [requestMap, setRequestMap] = useState<Map<number, Map<string, RequestType>>>(new Map())
   const [pediatricDates, setPediatricDates] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [savingCells, setSavingCells] = useState<Set<string>>(new Set())
@@ -47,14 +47,14 @@ export function MonthlySettingsPage() {
 
       setMembers(membersData)
 
-      const map = new Map<number, Set<string>>()
+      const map = new Map<number, Map<string, RequestType>>()
       for (const member of membersData) {
-        map.set(member.id, new Set())
+        map.set(member.id, new Map())
       }
       for (const req of requestsData) {
-        const set = map.get(req.member_id)
-        if (set) {
-          set.add(req.date)
+        const memberMap = map.get(req.member_id)
+        if (memberMap) {
+          memberMap.set(req.date, req.request_type)
         }
       }
       setRequestMap(map)
@@ -76,37 +76,40 @@ export function MonthlySettingsPage() {
       const cellKey = `${memberId}-${dateStr}`
       if (savingCells.has(cellKey)) return
 
-      const currentSet = new Set(requestMap.get(memberId) ?? [])
-      if (currentSet.has(dateStr)) {
-        currentSet.delete(dateStr)
+      const currentMap = new Map(requestMap.get(memberId) ?? [])
+      const prevMap = new Map(currentMap)
+      const currentType = currentMap.get(dateStr)
+
+      // 3状態サイクル: 空 → 公休 → 有給 → 空
+      if (!currentType) {
+        currentMap.set(dateStr, 'day_off')
+      } else if (currentType === 'day_off') {
+        currentMap.set(dateStr, 'paid_leave')
       } else {
-        currentSet.add(dateStr)
+        currentMap.delete(dateStr)
       }
 
       setRequestMap((prev) => {
         const next = new Map(prev)
-        next.set(memberId, currentSet)
+        next.set(memberId, currentMap)
         return next
       })
 
       setSavingCells((prev) => new Set(prev).add(cellKey))
       try {
+        const entries = Array.from(currentMap.entries())
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([date, request_type]) => ({ date, request_type }))
         await shiftRequestsApi.bulkUpdate({
           member_id: memberId,
           year_month: yearMonth,
-          dates: Array.from(currentSet).sort(),
+          entries,
         })
       } catch (e) {
         toast.error(e instanceof Error ? e.message : '希望休の更新に失敗しました')
         setRequestMap((prev) => {
-          const reverted = new Set(currentSet)
-          if (reverted.has(dateStr)) {
-            reverted.delete(dateStr)
-          } else {
-            reverted.add(dateStr)
-          }
           const next = new Map(prev)
-          next.set(memberId, reverted)
+          next.set(memberId, prevMap)
           return next
         })
       } finally {
@@ -174,6 +177,7 @@ export function MonthlySettingsPage() {
     return warnings
   }, [members, requestMap])
 
+
   const getColumnClass = useCallback((date: Date) => {
     const day = date.getDay()
     if (day === 0) return 'bg-sunday-bg/60'
@@ -208,7 +212,19 @@ export function MonthlySettingsPage() {
       </div>
 
       <section className="space-y-4">
-        <h2 className="text-base font-semibold text-warm-gray-800">希望休設定</h2>
+        <div className="flex items-center gap-4">
+          <h2 className="text-base font-semibold text-warm-gray-800">希望休設定</h2>
+          <div className="flex items-center gap-3 text-xs text-warm-gray-500">
+            <span className="flex items-center gap-1">
+              <span className="inline-block w-2 h-2 rounded-full bg-brand-500" />
+              公休希望
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="inline-block w-2 h-2 rounded-full bg-orange-500" />
+              有給希望
+            </span>
+          </div>
+        </div>
 
         {fullTimeWarnings.length > 0 && (
           <Alert variant="destructive">
@@ -247,7 +263,7 @@ export function MonthlySettingsPage() {
             </thead>
             <tbody>
               {members.map((member) => {
-                const memberDates = requestMap.get(member.id) ?? new Set()
+                const memberDates = requestMap.get(member.id) ?? new Map()
                 return (
                   <tr key={member.id} className="hover:bg-brand-50/30">
                     <td className="sticky left-0 z-10 bg-white border-b border-r border-warm-gray-200 px-3 py-1.5 font-medium text-warm-gray-700 whitespace-nowrap">
@@ -260,21 +276,25 @@ export function MonthlySettingsPage() {
                     </td>
                     {dates.map((date) => {
                       const dateStr = formatDate(date)
-                      const isActive = memberDates.has(dateStr)
+                      const requestType = memberDates.get(dateStr)
                       const isSaving = savingCells.has(`${member.id}-${dateStr}`)
                       return (
                         <td
                           key={dateStr}
                           className={`border-b border-r border-warm-gray-200 w-8 h-8 text-center cursor-pointer transition-colors duration-75 select-none ${getColumnClass(date)} ${
-                            isActive
+                            requestType === 'day_off'
                               ? 'bg-brand-100 hover:bg-brand-200'
-                              : 'hover:bg-warm-gray-100'
+                              : requestType === 'paid_leave'
+                                ? 'bg-orange-50 hover:bg-orange-100'
+                                : 'hover:bg-warm-gray-100'
                           } ${isSaving ? 'opacity-50' : ''}`}
                           onClick={() => toggleShiftRequest(member.id, dateStr)}
                         >
-                          {isActive && (
+                          {requestType && (
                             <div className="flex items-center justify-center">
-                              <div className="w-2 h-2 rounded-full bg-brand-500" />
+                              <div className={`w-2 h-2 rounded-full ${
+                                requestType === 'paid_leave' ? 'bg-orange-500' : 'bg-brand-500'
+                              }`} />
                             </div>
                           )}
                         </td>
