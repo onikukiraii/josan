@@ -13,6 +13,7 @@ from solver.config import ALL_SHIFT_TYPES, get_base_off_days, get_month_dates
 from solver.constraints import (
     add_capability_constraints,
     add_day_shift_eligibility,
+    add_day_shift_request_soft,
     add_early_equalization,
     add_early_shift_constraint,
     add_holiday_equalization,
@@ -65,6 +66,7 @@ def _load_data(
     dict[int, int],
     list[tuple[int, int]],
     dict[int, list[tuple[datetime.date, ShiftType]]],
+    dict[int, list[datetime.date]],
     set[datetime.date],
 ]:
     members = db.query(Member).order_by(Member.id).all()
@@ -82,9 +84,13 @@ def _load_data(
 
     requests_raw = db.query(ShiftRequest).filter(ShiftRequest.year_month == year_month).all()
     request_map: dict[int, list[tuple[datetime.date, ShiftType]]] = {}
+    day_shift_request_map: dict[int, list[datetime.date]] = {}
     for r in requests_raw:
-        shift_type = ShiftType.paid_leave if r.request_type == RequestType.paid_leave else ShiftType.day_off
-        request_map.setdefault(r.member_id, []).append((r.date, shift_type))
+        if r.request_type == RequestType.day_shift_request:
+            day_shift_request_map.setdefault(r.member_id, []).append(r.date)
+        else:
+            shift_type = ShiftType.paid_leave if r.request_type == RequestType.paid_leave else ShiftType.day_off
+            request_map.setdefault(r.member_id, []).append((r.date, shift_type))
 
     from entity.pediatric_doctor_schedule import PediatricDoctorSchedule
 
@@ -104,6 +110,7 @@ def _load_data(
         member_min_nights,
         ng_pairs,
         request_map,
+        day_shift_request_map,
         pediatric_dates,
     )
 
@@ -234,6 +241,7 @@ def generate_shift(db: Session, year_month: str) -> tuple[list[dict[str, object]
         member_min_nights,
         ng_pairs,
         request_map,
+        day_shift_request_map,
         pediatric_dates,
     ) = _load_data(db, year_month)
 
@@ -282,7 +290,8 @@ def generate_shift(db: Session, year_month: str) -> tuple[list[dict[str, object]
     night_diff = add_night_equalization(model, x, member_ids, dates)
     holiday_diff = add_holiday_equalization(model, x, member_ids, dates)
     early_diff = add_early_equalization(model, early, dates) if early else model.new_int_var(0, 0, "early_diff_zero")
-    model.minimize(night_diff * 10 + holiday_diff * 5 + early_diff * 3)
+    day_shift_fulfilled = add_day_shift_request_soft(model, x, day_shift_request_map)
+    model.minimize(night_diff * 10 + holiday_diff * 5 + early_diff * 3 - sum(day_shift_fulfilled) * 2)
 
     solver = cp_model.CpSolver()
     solver.parameters.max_time_in_seconds = SOLVER_TIMEOUT_SECONDS
@@ -319,8 +328,15 @@ def generate_shift(db: Session, year_month: str) -> tuple[list[dict[str, object]
             early_diff = add_early_equalization(model, early, dates)
         else:
             early_diff = model.new_int_var(0, 0, "early_diff_zero_s2")
+        day_shift_fulfilled = add_day_shift_request_soft(model, x, day_shift_request_map)
 
-        model.maximize(sum(fulfilled_vars) * 100 - night_diff * 10 - holiday_diff * 5 - early_diff * 3)
+        model.maximize(
+            sum(fulfilled_vars) * 100
+            + sum(day_shift_fulfilled) * 2
+            - night_diff * 10
+            - holiday_diff * 5
+            - early_diff * 3
+        )
 
         solver = cp_model.CpSolver()
         solver.parameters.max_time_in_seconds = SOLVER_TIMEOUT_SECONDS

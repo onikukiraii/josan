@@ -453,7 +453,7 @@ export interface components {
          * RequestType
          * @enum {string}
          */
-        RequestType: "day_off" | "paid_leave";
+        RequestType: "day_off" | "paid_leave" | "day_shift_request";
         /** ScheduleGenerateParams */
         ScheduleGenerateParams: {
             /** Year Month */

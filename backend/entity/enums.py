@@ -101,3 +101,4 @@ class ShiftType(str, enum.Enum):
 class RequestType(str, enum.Enum):
     day_off = "day_off"
     paid_leave = "paid_leave"
+    day_shift_request = "day_shift_request"

@@ -395,6 +395,24 @@ def add_shift_request_soft(
     return fulfilled_vars
 
 
+def add_day_shift_request_soft(
+    model: cp_model.CpModel,
+    x: VarDict,
+    day_shift_request_map: dict[int, list[datetime.date]],
+) -> list[cp_model.IntVar]:
+    """S5: 日勤希望をソフト制約として追加。叶えた数のリストを返す"""
+    fulfilled_vars: list[cp_model.IntVar] = []
+    for m, req_dates in day_shift_request_map.items():
+        for d in req_dates:
+            ds = str(d)
+            is_day = model.new_bool_var(f"day_req_{m}_{ds}")
+            day_vars = [x[m][ds][s] for s in DAY_SHIFT_TYPES]
+            model.add(sum(day_vars) >= 1).only_enforce_if(is_day)
+            model.add(sum(day_vars) == 0).only_enforce_if(is_day.negated())
+            fulfilled_vars.append(is_day)
+    return fulfilled_vars
+
+
 def add_night_equalization(
     model: cp_model.CpModel,
     x: VarDict,

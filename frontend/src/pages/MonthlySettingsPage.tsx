@@ -80,11 +80,13 @@ export function MonthlySettingsPage() {
       const prevMap = new Map(currentMap)
       const currentType = currentMap.get(dateStr)
 
-      // 3状態サイクル: 空 → 公休 → 有給 → 空
+      // 4状態サイクル: 空 → 公休 → 有給 → 日勤希望 → 空
       if (!currentType) {
         currentMap.set(dateStr, 'day_off')
       } else if (currentType === 'day_off') {
         currentMap.set(dateStr, 'paid_leave')
+      } else if (currentType === 'paid_leave') {
+        currentMap.set(dateStr, 'day_shift_request')
       } else {
         currentMap.delete(dateStr)
       }
@@ -187,7 +189,13 @@ export function MonthlySettingsPage() {
     const warnings: { memberId: number; name: string; count: number }[] = []
     for (const member of members) {
       if (member.employment_type !== 'full_time') continue
-      const count = requestMap.get(member.id)?.size ?? 0
+      const memberDates = requestMap.get(member.id)
+      if (!memberDates) continue
+      // 公休・有給のみカウント（日勤希望は除外）
+      let count = 0
+      for (const rt of memberDates.values()) {
+        if (rt === 'day_off' || rt === 'paid_leave') count++
+      }
       if (count > 3) {
         warnings.push({ memberId: member.id, name: member.name, count })
       }
@@ -240,6 +248,10 @@ export function MonthlySettingsPage() {
             <span className="flex items-center gap-1">
               <span className="inline-block w-2 h-2 rounded-full bg-orange-500" />
               有給希望
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="inline-block w-2 h-2 rounded-full bg-green-500" />
+              日勤希望
             </span>
           </div>
         </div>
@@ -314,14 +326,16 @@ export function MonthlySettingsPage() {
                               ? 'bg-brand-100 hover:bg-brand-200'
                               : requestType === 'paid_leave'
                                 ? 'bg-orange-50 hover:bg-orange-100'
-                                : 'hover:bg-warm-gray-100'
+                                : requestType === 'day_shift_request'
+                                  ? 'bg-green-50 hover:bg-green-100'
+                                  : 'hover:bg-warm-gray-100'
                           } ${isSaving ? 'opacity-50' : ''}`}
                           onClick={() => toggleShiftRequest(member.id, dateStr)}
                         >
                           {requestType && (
                             <div className="flex items-center justify-center">
                               <div className={`w-2 h-2 rounded-full ${
-                                requestType === 'paid_leave' ? 'bg-orange-500' : 'bg-brand-500'
+                                requestType === 'paid_leave' ? 'bg-orange-500' : requestType === 'day_shift_request' ? 'bg-green-500' : 'bg-brand-500'
                               }`} />
                             </div>
                           )}

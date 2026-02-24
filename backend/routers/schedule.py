@@ -275,6 +275,8 @@ def get_schedule_summary(schedule_id: int, db: Session = Depends(get_db)) -> Sch
     request_entries_by_member: dict[int, list[tuple[str, str]]] = {}
     for r in requests:
         rt = r.request_type.value if hasattr(r.request_type, "value") else str(r.request_type)
+        if rt == "day_shift_request":
+            continue
         request_entries_by_member.setdefault(r.member_id, []).append((str(r.date), rt))
 
     member_summaries: list[MemberSummary] = []
