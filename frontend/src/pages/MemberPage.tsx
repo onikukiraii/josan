@@ -165,6 +165,15 @@ export function MemberPage() {
     }
   }, [deleteTarget, fetchMembers])
 
+  const handleReorder = useCallback(async (memberId: number, direction: 'up' | 'down') => {
+    try {
+      const data = await membersApi.reorder(memberId, direction)
+      setMembers(data)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : '並び替えに失敗しました')
+    }
+  }, [])
+
   const handleCopy = useCallback(async (member: MemberResponse) => {
     try {
       await membersApi.create({
@@ -217,7 +226,7 @@ export function MemberPage() {
                 <TableHead className="w-[80px] text-left">夜勤上限</TableHead>
                 <TableHead className="w-[80px] text-left">確定回数</TableHead>
                 <TableHead className="text-center">能力</TableHead>
-                <TableHead className="w-[180px] text-center">アクション</TableHead>
+                <TableHead className="w-[220px] text-center">アクション</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -255,11 +264,11 @@ export function MemberPage() {
                 <TableHead className="w-[80px] text-left font-semibold text-brand-800">夜勤上限</TableHead>
                 <TableHead className="w-[80px] text-left font-semibold text-brand-800">確定回数</TableHead>
                 <TableHead className="text-center font-semibold text-brand-800">能力</TableHead>
-                <TableHead className="w-[180px] text-center font-semibold text-brand-800">アクション</TableHead>
+                <TableHead className="w-[220px] text-center font-semibold text-brand-800">アクション</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sortedMembers.map(member => {
+              {sortedMembers.map((member, idx) => {
                 const qBadge = QUALIFICATION_BADGE[member.qualification]
                 return (
                   <TableRow
@@ -306,6 +315,24 @@ export function MemberPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 text-warm-gray-400 hover:text-brand-600 hover:bg-brand-50"
+                          disabled={idx === 0}
+                          onClick={() => handleReorder(member.id, 'up')}
+                        >
+                          ▲
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 text-warm-gray-400 hover:text-brand-600 hover:bg-brand-50"
+                          disabled={idx === sortedMembers.length - 1}
+                          onClick={() => handleReorder(member.id, 'down')}
+                        >
+                          ▼
+                        </Button>
                         <Button
                           variant="ghost"
                           size="sm"

@@ -265,7 +265,7 @@ def get_schedule_summary(schedule_id: int, db: Session = Depends(get_db)) -> Sch
 
     assignments = db.query(ShiftAssignment).filter(ShiftAssignment.schedule_id == schedule_id).all()
     requests = db.query(ShiftRequest).filter(ShiftRequest.year_month == schedule.year_month).all()
-    members = db.query(Member).order_by(Member.id).all()
+    members = db.query(Member).order_by(Member.position, Member.id).all()
 
     month_dates = get_month_dates(schedule.year_month)
     days_in_month = len(month_dates)

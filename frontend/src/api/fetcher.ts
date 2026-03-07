@@ -74,6 +74,12 @@ export const membersApi = {
     })
     unwrap(res)
   },
+  reorder: async (memberId: number, direction: 'up' | 'down') => {
+    const res = await api.PATCH('/members/reorder', {
+      body: { member_id: memberId, direction },
+    })
+    return unwrap<MemberResponse[]>(res)
+  },
 }
 
 // --- NG Pairs ---

@@ -48,15 +48,19 @@ export function compareMemberForDisplay(
   a: MemberResponse,
   b: MemberResponse,
 ): number {
-  // 1. 常勤 > 非常勤
+  // 1. position 昇順
+  const posDiff = a.position - b.position
+  if (posDiff !== 0) return posDiff
+
+  // 2. 常勤 > 非常勤
   const empDiff = EMPLOYMENT_TYPE_ORDER[a.employment_type] - EMPLOYMENT_TYPE_ORDER[b.employment_type]
   if (empDiff !== 0) return empDiff
 
-  // 2. 能力数が多い方が先
+  // 3. 能力数が多い方が先
   const capDiff = b.capabilities.length - a.capabilities.length
   if (capDiff !== 0) return capDiff
 
-  // 3. 助産師 > 看護師 > 准看護師
+  // 4. 助産師 > 看護師 > 准看護師
   return QUALIFICATION_ORDER[a.qualification] - QUALIFICATION_ORDER[b.qualification]
 }
 

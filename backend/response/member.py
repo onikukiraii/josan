@@ -12,6 +12,7 @@ class MemberResponse(BaseModel):
     employment_type: EmploymentType = Field(title="雇用形態")
     max_night_shifts: int = Field(title="夜勤上限")
     min_night_shifts: int = Field(title="夜勤確定回数")
+    position: int = Field(title="表示順")
     night_shift_deduction_balance: int = Field(title="夜勤控除残高")
     capabilities: list[CapabilityType] = Field(title="能力")
     created_at: datetime

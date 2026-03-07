@@ -41,6 +41,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/members/reorder": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Reorder Member */
+        patch: operations["reorder_member_members_reorder_patch"];
+        trace?: never;
+    };
     "/ng-pairs/": {
         parameters: {
             query?: never;
@@ -449,6 +466,16 @@ export interface components {
          * @enum {string}
          */
         Qualification: "nurse" | "associate_nurse" | "midwife";
+        /** ReorderParams */
+        ReorderParams: {
+            /** メンバーID */
+            member_id: number;
+            /**
+             * 移動方向
+             * @enum {string}
+             */
+            direction: "up" | "down";
+        };
         /**
          * RequestType
          * @enum {string}
@@ -761,6 +788,39 @@ export interface operations {
                     "application/json": {
                         [key: string]: string;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reorder_member_members_reorder_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReorderParams"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberResponse"][];
                 };
             };
             /** @description Validation Error */

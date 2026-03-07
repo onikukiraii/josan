@@ -1,4 +1,8 @@
+from typing import Literal
+
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field
+from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 
 from db.session import get_db
@@ -19,6 +23,7 @@ def _to_response(member: Member) -> MemberResponse:
         employment_type=member.employment_type,
         max_night_shifts=member.max_night_shifts,
         min_night_shifts=member.min_night_shifts,
+        position=member.position,
         night_shift_deduction_balance=member.night_shift_deduction_balance,
         capabilities=[cap.capability_type for cap in member.capabilities],
         created_at=member.created_at,
@@ -28,7 +33,7 @@ def _to_response(member: Member) -> MemberResponse:
 
 @router.get("/", response_model=list[MemberResponse])
 def get_members(db: Session = Depends(get_db)) -> list[MemberResponse]:
-    members = db.query(Member).options(joinedload(Member.capabilities)).order_by(Member.id).all()
+    members = db.query(Member).options(joinedload(Member.capabilities)).order_by(Member.position, Member.id).all()
     return [_to_response(m) for m in members]
 
 
@@ -42,12 +47,14 @@ def get_member(member_id: int, db: Session = Depends(get_db)) -> MemberResponse:
 
 @router.post("/", response_model=MemberResponse)
 def create_member(params: MemberCreateParams, db: Session = Depends(get_db)) -> MemberResponse:
+    max_pos = db.query(func.max(Member.position)).scalar() or 0
     member = Member(
         name=params.name,
         qualification=params.qualification,
         employment_type=params.employment_type,
         max_night_shifts=params.max_night_shifts,
         min_night_shifts=params.min_night_shifts,
+        position=max_pos + 1,
     )
     db.add(member)
     db.flush()
@@ -113,3 +120,33 @@ def delete_member(member_id: int, db: Session = Depends(get_db)) -> dict[str, st
     db.delete(member)
     db.commit()
     return {"detail": "Deleted"}
+
+
+class ReorderParams(BaseModel):
+    member_id: int = Field(title="メンバーID")
+    direction: Literal["up", "down"] = Field(title="移動方向")
+
+
+@router.patch("/reorder", response_model=list[MemberResponse])
+def reorder_member(params: ReorderParams, db: Session = Depends(get_db)) -> list[MemberResponse]:
+    target = db.query(Member).options(joinedload(Member.capabilities)).filter(Member.id == params.member_id).first()
+    if not target:
+        raise HTTPException(status_code=404, detail="Member not found")
+
+    # position 順で全メンバーを取得
+    all_members = db.query(Member).order_by(Member.position, Member.id).all()
+    idx = next((i for i, m in enumerate(all_members) if m.id == target.id), None)
+    if idx is None:
+        raise HTTPException(status_code=404, detail="Member not found")
+
+    if params.direction == "up" and idx > 0:
+        neighbor = all_members[idx - 1]
+        target.position, neighbor.position = neighbor.position, target.position
+    elif params.direction == "down" and idx < len(all_members) - 1:
+        neighbor = all_members[idx + 1]
+        target.position, neighbor.position = neighbor.position, target.position
+
+    db.commit()
+
+    members = db.query(Member).options(joinedload(Member.capabilities)).order_by(Member.position, Member.id).all()
+    return [_to_response(m) for m in members]
