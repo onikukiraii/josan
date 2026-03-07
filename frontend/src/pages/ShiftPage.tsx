@@ -107,6 +107,7 @@ export function ShiftPage() {
   const [unfulfilled, setUnfulfilled] = useState<UnfulfilledRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
+  const [selectedMemberId, setSelectedMemberId] = useState<number | null>(null)
 
   const fetchData = useCallback(async (ym: string) => {
     try {
@@ -434,7 +435,13 @@ export function ShiftPage() {
                                     <DropdownMenuTrigger asChild>
                                       <button
                                         type="button"
-                                        className="w-full px-1 py-0.5 rounded text-xs cursor-pointer hover:bg-brand-50 transition-colors text-warm-gray-900 font-medium max-w-20 block mx-auto flex items-center justify-center gap-0.5"
+                                        className={`w-full px-1 py-0.5 rounded text-xs cursor-pointer hover:bg-brand-50 transition-colors font-medium max-w-20 block mx-auto flex items-center justify-center gap-0.5 ${
+                                          selectedMemberId === assignment.member_id
+                                            ? 'bg-brand-200 text-brand-900 ring-1 ring-brand-400'
+                                            : selectedMemberId !== null
+                                              ? 'text-warm-gray-400'
+                                              : 'text-warm-gray-900'
+                                        }`}
                                       >
                                         <span className="truncate">{assignment.member_name}</span>
                                         {assignment.is_early && (
@@ -567,10 +574,19 @@ export function ShiftPage() {
 
                       const hasIssue = workingDaysShort || requestUnfulfilled
 
+                      const isSelected = selectedMemberId === ms.member_id
+
                       return (
                         <TableRow
                           key={ms.member_id}
-                          className={hasIssue ? 'bg-warning-bg/50 hover:bg-warning-bg/70' : 'hover:bg-brand-50/30'}
+                          className={`cursor-pointer transition-colors ${
+                            isSelected
+                              ? 'bg-brand-100 hover:bg-brand-150'
+                              : hasIssue
+                                ? 'bg-warning-bg/50 hover:bg-warning-bg/70'
+                                : 'hover:bg-brand-50/30'
+                          }`}
+                          onClick={() => setSelectedMemberId(isSelected ? null : ms.member_id)}
                         >
                           <TableCell className="font-medium">
                             <span className={hasIssue ? 'text-warning' : 'text-warm-gray-900'}>
