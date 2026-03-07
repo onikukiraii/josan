@@ -59,6 +59,7 @@ interface FormState {
   employment_type: EmploymentType
   max_night_shifts: number
   min_night_shifts: number
+  external_night_count: number
   capabilities: CapabilityType[]
 }
 
@@ -68,6 +69,7 @@ const INITIAL_FORM: FormState = {
   employment_type: 'full_time',
   max_night_shifts: 4,
   min_night_shifts: 0,
+  external_night_count: 0,
   capabilities: [],
 }
 
@@ -115,6 +117,7 @@ export function MemberPage() {
       employment_type: member.employment_type,
       max_night_shifts: member.max_night_shifts,
       min_night_shifts: member.min_night_shifts,
+      external_night_count: member.external_night_count,
       capabilities: [...member.capabilities],
     })
     setDialogOpen(true)
@@ -132,6 +135,7 @@ export function MemberPage() {
         employment_type: form.employment_type,
         max_night_shifts: form.max_night_shifts,
         min_night_shifts: form.min_night_shifts,
+        external_night_count: form.external_night_count,
         capabilities: form.capabilities,
       }
 
@@ -182,6 +186,7 @@ export function MemberPage() {
         employment_type: member.employment_type,
         max_night_shifts: member.max_night_shifts,
         min_night_shifts: member.min_night_shifts,
+        external_night_count: member.external_night_count,
         capabilities: [...member.capabilities],
       })
       toast.success('メンバーをコピーしました')
@@ -225,6 +230,7 @@ export function MemberPage() {
                 <TableHead className="w-[80px] text-left">雇用</TableHead>
                 <TableHead className="w-[80px] text-left">夜勤上限</TableHead>
                 <TableHead className="w-[80px] text-left">確定回数</TableHead>
+                <TableHead className="w-[80px] text-left">他院夜勤</TableHead>
                 <TableHead className="text-center">能力</TableHead>
                 <TableHead className="w-[220px] text-center">アクション</TableHead>
               </TableRow>
@@ -234,6 +240,7 @@ export function MemberPage() {
                 <TableRow key={i}>
                   <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                   <TableCell><Skeleton className="h-5 w-12" /></TableCell>
+                  <TableCell><Skeleton className="h-5 w-10" /></TableCell>
                   <TableCell><Skeleton className="h-5 w-10" /></TableCell>
                   <TableCell><Skeleton className="h-5 w-10" /></TableCell>
                   <TableCell>
@@ -263,6 +270,7 @@ export function MemberPage() {
                 <TableHead className="w-[80px] text-left font-semibold text-brand-800">雇用</TableHead>
                 <TableHead className="w-[80px] text-left font-semibold text-brand-800">夜勤上限</TableHead>
                 <TableHead className="w-[80px] text-left font-semibold text-brand-800">確定回数</TableHead>
+                <TableHead className="w-[80px] text-left font-semibold text-brand-800">他院夜勤</TableHead>
                 <TableHead className="text-center font-semibold text-brand-800">能力</TableHead>
                 <TableHead className="w-[220px] text-center font-semibold text-brand-800">アクション</TableHead>
               </TableRow>
@@ -299,6 +307,9 @@ export function MemberPage() {
                     </TableCell>
                     <TableCell className="text-warm-gray-600">
                       {member.min_night_shifts > 0 ? `${member.min_night_shifts}回` : 'なし'}
+                    </TableCell>
+                    <TableCell className="text-warm-gray-600">
+                      {member.external_night_count > 0 ? `${member.external_night_count}回` : ''}
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
@@ -448,6 +459,7 @@ export function MemberPage() {
                       ...prev,
                       max_night_shifts: newMax,
                       min_night_shifts: Math.min(prev.min_night_shifts, newMax),
+                      external_night_count: Math.min(prev.external_night_count, newMax),
                     }))
                   }}
                 >
@@ -484,6 +496,30 @@ export function MemberPage() {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-warm-gray-700">他院夜勤回数</Label>
+              <Select
+                value={String(form.external_night_count)}
+                onValueChange={v =>
+                  setForm(prev => ({ ...prev, external_night_count: Number(v) }))
+                }
+              >
+                <SelectTrigger className="w-[120px] focus:ring-brand-500">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: Math.min(form.max_night_shifts + 1, 6) }, (_, i) => i).map(n => (
+                    <SelectItem key={n} value={String(n)}>
+                      {n === 0 ? 'なし' : `${n}回`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-warm-gray-400">
+                他院で行う夜勤の回数（院内夜勤上限は夜勤上限から自動減算）
+              </p>
             </div>
 
             <div className="space-y-3">

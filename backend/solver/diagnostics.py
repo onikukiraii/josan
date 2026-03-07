@@ -22,6 +22,7 @@ def diagnose_infeasibility(
     member_max_nights: dict[int, int],
     member_off_days: dict[int, int],
     dates: list[datetime.date],
+    member_external_nights: dict[int, int] | None = None,
 ) -> list[str]:
     """制約条件を満たせない原因を診断し、問題点のリストを返す。"""
     problems: list[str] = []
@@ -66,7 +67,8 @@ def diagnose_infeasibility(
         or CapabilityType.night_leader in member_capabilities.get(m, set())
     ]
     # 夜勤後は翌日休みなので、1回の夜勤で2日消費
-    total_night_capacity = sum(member_max_nights.get(m, 4) for m in night_capable)
+    ext = member_external_nights or {}
+    total_night_capacity = sum(member_max_nights.get(m, 4) - ext.get(m, 0) for m in night_capable)
     if total_night_capacity < total_night_slots:
         problems.append(
             f"月間の夜勤枠は{total_night_slots}回ですが、"

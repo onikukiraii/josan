@@ -332,6 +332,11 @@ export interface components {
              */
             min_night_shifts: number;
             /**
+             * 他院夜勤回数
+             * @default 0
+             */
+            external_night_count: number;
+            /**
              * 能力
              * @default []
              */
@@ -351,6 +356,10 @@ export interface components {
             max_night_shifts: number;
             /** 夜勤確定回数 */
             min_night_shifts: number;
+            /** 他院夜勤回数 */
+            external_night_count: number;
+            /** 表示順 */
+            position: number;
             /** 夜勤控除残高 */
             night_shift_deduction_balance: number;
             /** 能力 */
@@ -385,6 +394,11 @@ export interface components {
             paid_leave_count: number;
             /** 夜勤回数 */
             night_shift_count: number;
+            /**
+             * 他院夜勤回数
+             * @default 0
+             */
+            external_night_count: number;
             /** 日祝出勤数 */
             holiday_work_count: number;
             /**
@@ -411,6 +425,8 @@ export interface components {
             max_night_shifts?: number | null;
             /** 夜勤確定回数 */
             min_night_shifts?: number | null;
+            /** 他院夜勤回数 */
+            external_night_count?: number | null;
             /** 能力 */
             capabilities?: components["schemas"]["CapabilityType"][] | null;
         };
@@ -618,7 +634,7 @@ export interface components {
          * ShiftType
          * @enum {string}
          */
-        ShiftType: "outpatient_leader" | "treatment_room" | "beauty" | "mw_outpatient" | "ward_leader" | "ward" | "delivery" | "delivery_charge" | "ward_free" | "outpatient_free" | "night_leader" | "night" | "day_off" | "paid_leave";
+        ShiftType: "outpatient_leader" | "treatment_room" | "beauty" | "mw_outpatient" | "ward_leader" | "ward" | "delivery" | "delivery_charge" | "ward_free" | "outpatient_free" | "night_leader" | "night" | "external_night" | "day_off" | "paid_leave";
         /** UnfulfilledRequest */
         UnfulfilledRequest: {
             /** メンバーID */

@@ -1,3 +1,4 @@
+import calendar
 import datetime
 import logging
 
@@ -8,14 +9,17 @@ from entity.enums import CapabilityType, EmploymentType, Qualification, RequestT
 from entity.member import Member
 from entity.member_capability import MemberCapability
 from entity.ng_pair import NgPair
+from entity.schedule import Schedule
+from entity.shift_assignment import ShiftAssignment
 from entity.shift_request import ShiftRequest
-from solver.config import ALL_SHIFT_TYPES, get_base_off_days, get_month_dates
+from solver.config import ALL_SHIFT_TYPES, EXTERNAL_NIGHT_TYPES, NIGHT_SHIFT_TYPES, get_base_off_days, get_month_dates
 from solver.constraints import (
     add_capability_constraints,
     add_day_shift_eligibility,
     add_day_shift_request_soft,
     add_early_equalization,
     add_early_shift_constraint,
+    add_external_night_count,
     add_holiday_equalization,
     add_max_consecutive_work,
     add_ng_pair_constraint,
@@ -28,6 +32,7 @@ from solver.constraints import (
     add_off_day_count,
     add_one_shift_per_day,
     add_paid_leave_only_requested,
+    add_prev_month_night_rest,
     add_rookie_ward_constraint,
     add_shift_request_hard,
     add_shift_request_soft,
@@ -53,6 +58,7 @@ CONSTRAINT_LABELS: dict[str, str] = {
     "H14": "日祝は病棟系のみ稼働",
     "H15": "平日に早番1名配置",
     "H16": "夜勤確定回数（最低保証）",
+    "H17": "他院夜勤回数",
 }
 
 
@@ -64,10 +70,12 @@ def _load_data(
     dict[int, Qualification],
     dict[int, int],
     dict[int, int],
+    dict[int, int],
     list[tuple[int, int]],
     dict[int, list[tuple[datetime.date, ShiftType]]],
     dict[int, list[datetime.date]],
     set[datetime.date],
+    set[int],
 ]:
     members = db.query(Member).order_by(Member.id).all()
 
@@ -78,6 +86,7 @@ def _load_data(
     member_qualifications: dict[int, Qualification] = {m.id: m.qualification for m in members}
     member_max_nights: dict[int, int] = {m.id: m.max_night_shifts for m in members}
     member_min_nights: dict[int, int] = {m.id: m.min_night_shifts for m in members}
+    member_external_nights: dict[int, int] = {m.id: m.external_night_count for m in members}
 
     ng_pairs_raw = db.query(NgPair).all()
     ng_pairs = [(p.member_id_1, p.member_id_2) for p in ng_pairs_raw]
@@ -102,16 +111,42 @@ def _load_data(
     )
     pediatric_dates = {p.date for p in pediatric_raw}
 
+    # 前月最終日に夜勤だったメンバーを取得
+    year, month = map(int, year_month.split("-"))
+    if month == 1:
+        prev_year, prev_month = year - 1, 12
+    else:
+        prev_year, prev_month = year, month - 1
+    prev_year_month = f"{prev_year:04d}-{prev_month:02d}"
+    _, prev_last_day = calendar.monthrange(prev_year, prev_month)
+    prev_last_date = datetime.date(prev_year, prev_month, prev_last_day)
+
+    prev_night_member_ids: set[int] = set()
+    prev_schedule = db.query(Schedule).filter(Schedule.year_month == prev_year_month).first()
+    if prev_schedule:
+        prev_night_assignments = (
+            db.query(ShiftAssignment)
+            .filter(
+                ShiftAssignment.schedule_id == prev_schedule.id,
+                ShiftAssignment.date == prev_last_date,
+                ShiftAssignment.shift_type.in_(list(NIGHT_SHIFT_TYPES | EXTERNAL_NIGHT_TYPES)),
+            )
+            .all()
+        )
+        prev_night_member_ids = {a.member_id for a in prev_night_assignments}
+
     return (
         members,
         member_capabilities,
         member_qualifications,
         member_max_nights,
         member_min_nights,
+        member_external_nights,
         ng_pairs,
         request_map,
         day_shift_request_map,
         pediatric_dates,
+        prev_night_member_ids,
     )
 
 
@@ -144,8 +179,10 @@ def _add_hard_constraints(
     ng_pairs: list[tuple[int, int]],
     pediatric_dates: set[datetime.date],
     rookie_ids: list[int],
+    member_external_nights: dict[int, int] | None = None,
     part_time_ids: set[int] | None = None,
     skip_constraints: set[str] | None = None,
+    prev_night_member_ids: set[int] | None = None,
 ) -> dict[int, dict[str, cp_model.IntVar]] | None:
     skip = skip_constraints or set()
 
@@ -158,6 +195,8 @@ def _add_hard_constraints(
 
     if "H6" not in skip:
         add_night_then_off(model, x, member_ids, dates)
+        if prev_night_member_ids:
+            add_prev_month_night_rest(model, x, member_ids, dates, prev_night_member_ids)
     if "H7" not in skip:
         add_ng_pair_constraint(model, x, dates, ng_pairs)
     if "H8" not in skip:
@@ -165,7 +204,7 @@ def _add_hard_constraints(
     if "H9" not in skip:
         add_max_consecutive_work(model, x, member_ids, dates)
     if "H10" not in skip:
-        add_night_shift_limit(model, x, member_ids, dates, member_max_nights)
+        add_night_shift_limit(model, x, member_ids, dates, member_max_nights, member_external_nights)
     if "H11" not in skip:
         add_off_day_count(model, x, member_ids, dates, member_off_days, part_time_ids)
     if "H14" not in skip:
@@ -173,7 +212,9 @@ def _add_hard_constraints(
     if rookie_ids and "H13" not in skip:
         add_rookie_ward_constraint(model, x, member_ids, dates, rookie_ids, member_capabilities)
     if "H16" not in skip:
-        add_night_shift_minimum(model, x, member_ids, dates, member_min_nights)
+        add_night_shift_minimum(model, x, member_ids, dates, member_min_nights, member_external_nights)
+    if "H17" not in skip and member_external_nights:
+        add_external_night_count(model, x, member_ids, dates, member_external_nights)
 
     early = None
     if "H15" not in skip:
@@ -192,6 +233,7 @@ def _diagnose_by_relaxation(
     ng_pairs: list[tuple[int, int]],
     pediatric_dates: set[datetime.date],
     rookie_ids: list[int],
+    member_external_nights: dict[int, int] | None = None,
     part_time_ids: set[int] | None = None,
 ) -> list[str]:
     """制約を1つずつ外して再求解し、どの制約が原因か特定する。"""
@@ -216,7 +258,8 @@ def _diagnose_by_relaxation(
             ng_pairs,
             pediatric_dates,
             rookie_ids,
-            part_time_ids,
+            member_external_nights=member_external_nights,
+            part_time_ids=part_time_ids,
             skip_constraints={key},
         )
 
@@ -239,10 +282,12 @@ def generate_shift(db: Session, year_month: str) -> tuple[list[dict[str, object]
         member_qualifications,
         member_max_nights,
         member_min_nights,
+        member_external_nights,
         ng_pairs,
         request_map,
         day_shift_request_map,
         pediatric_dates,
+        prev_night_member_ids,
     ) = _load_data(db, year_month)
 
     dates = get_month_dates(year_month)
@@ -255,16 +300,14 @@ def generate_shift(db: Session, year_month: str) -> tuple[list[dict[str, object]
     member_off_days: dict[int, int] = {}
     base_off = get_base_off_days(len(dates))
     for m in members:
-        if m.id in part_time_ids:
-            # 非常勤: 夜勤上限分だけ出勤し、残りは全て公休
-            member_off_days[m.id] = len(dates) - m.max_night_shifts
-        else:
-            off = base_off
+        off = base_off
+        if m.id not in part_time_ids:
             balance = m.night_shift_deduction_balance
             estimated_nights = m.max_night_shifts
             if balance + estimated_nights >= 8:
                 off -= 1
-            member_off_days[m.id] = off
+
+        member_off_days[m.id] = off
 
     # Step 1: 希望休をハード制約
     model = cp_model.CpModel()
@@ -282,7 +325,9 @@ def generate_shift(db: Session, year_month: str) -> tuple[list[dict[str, object]
         ng_pairs,
         pediatric_dates,
         rookie_ids,
-        part_time_ids,
+        member_external_nights=member_external_nights,
+        part_time_ids=part_time_ids,
+        prev_night_member_ids=prev_night_member_ids,
     )
     add_shift_request_hard(model, x, request_map)
     add_paid_leave_only_requested(model, x, member_ids, dates, request_map)
@@ -317,7 +362,9 @@ def generate_shift(db: Session, year_month: str) -> tuple[list[dict[str, object]
             ng_pairs,
             pediatric_dates,
             rookie_ids,
-            part_time_ids,
+            member_external_nights=member_external_nights,
+            part_time_ids=part_time_ids,
+            prev_night_member_ids=prev_night_member_ids,
         )
 
         fulfilled_vars = add_shift_request_soft(model, x, request_map)
@@ -352,6 +399,7 @@ def generate_shift(db: Session, year_month: str) -> tuple[list[dict[str, object]
                 member_max_nights,
                 member_off_days,
                 dates,
+                member_external_nights=member_external_nights,
             )
             if problems:
                 detail = "以下の問題が見つかりました:\n" + "\n".join(f"・{p}" for p in problems)
@@ -369,7 +417,8 @@ def generate_shift(db: Session, year_month: str) -> tuple[list[dict[str, object]
                     ng_pairs,
                     pediatric_dates,
                     rookie_ids,
-                    part_time_ids,
+                    member_external_nights=member_external_nights,
+                    part_time_ids=part_time_ids,
                 )
                 if relaxable:
                     detail = (

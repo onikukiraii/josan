@@ -5,6 +5,7 @@ from ortools.sat.python import cp_model
 from entity.enums import CapabilityType, Qualification, ShiftType
 from solver.config import (
     DAY_SHIFT_TYPES,
+    EXTERNAL_NIGHT_TYPES,
     NIGHT_SHIFT_TYPES,
     OFF_DAY_TYPES,
     STAFFING_REQUIREMENTS,
@@ -118,7 +119,7 @@ def add_night_shift_eligibility(
         if CapabilityType.night_shift not in caps:
             for d in dates:
                 ds = str(d)
-                for s in NIGHT_SHIFT_TYPES:
+                for s in NIGHT_SHIFT_TYPES | EXTERNAL_NIGHT_TYPES:
                     model.add(x[m][ds][s] == 0)
 
 
@@ -134,8 +135,23 @@ def add_night_then_off(
             d_today = str(dates[i])
             d_tomorrow = str(dates[i + 1])
             off_tomorrow = sum(x[m][d_tomorrow][s] for s in OFF_DAY_TYPES)
-            for ns in NIGHT_SHIFT_TYPES:
+            for ns in NIGHT_SHIFT_TYPES | EXTERNAL_NIGHT_TYPES:
                 model.add(off_tomorrow >= x[m][d_today][ns])
+
+
+def add_prev_month_night_rest(
+    model: cp_model.CpModel,
+    x: VarDict,
+    member_ids: list[int],
+    dates: list[datetime.date],
+    prev_night_member_ids: set[int],
+) -> None:
+    """H6 補助: 前月最終日に夜勤だったメンバーは当月1日を公休または有給にする"""
+    first_day = str(dates[0])
+    for m in member_ids:
+        if m in prev_night_member_ids:
+            off_first = sum(x[m][first_day][s] for s in OFF_DAY_TYPES)
+            model.add(off_first >= 1)
 
 
 def add_ng_pair_constraint(
@@ -192,10 +208,12 @@ def add_night_shift_limit(
     member_ids: list[int],
     dates: list[datetime.date],
     member_max_nights: dict[int, int],
+    member_external_nights: dict[int, int] | None = None,
 ) -> None:
-    """H10: 夜勤回数 ≤ 個人の月間上限"""
+    """H10: 院内夜勤回数 ≤ 個人の月間上限 - 他院夜勤回数"""
+    ext = member_external_nights or {}
     for m in member_ids:
-        max_n = member_max_nights.get(m, 4)
+        max_n = member_max_nights.get(m, 4) - ext.get(m, 0)
         night_vars = []
         for d in dates:
             ds = str(d)
@@ -210,10 +228,12 @@ def add_night_shift_minimum(
     member_ids: list[int],
     dates: list[datetime.date],
     member_min_nights: dict[int, int],
+    member_external_nights: dict[int, int] | None = None,
 ) -> None:
-    """H16: 夜勤回数 >= 個人の確定回数"""
+    """H16: 院内夜勤回数 >= 確定回数 - 他院夜勤回数"""
+    ext = member_external_nights or {}
     for m in member_ids:
-        min_n = member_min_nights.get(m, 0)
+        min_n = member_min_nights.get(m, 0) - ext.get(m, 0)
         if min_n <= 0:
             continue
         night_vars = []
@@ -261,7 +281,7 @@ def add_paid_leave_only_requested(
     dates: list[datetime.date],
     request_map: dict[int, list[tuple[datetime.date, ShiftType]]],
 ) -> None:
-    """H13: 有給は希望した日のみ使用可能。希望がない日の paid_leave を 0 に固定"""
+    """H12b: 有給は希望した日のみ使用可能。希望がない日の paid_leave を 0 に固定"""
     paid_leave_dates: dict[int, set[str]] = {}
     for m, entries in request_map.items():
         for d, shift_type in entries:
@@ -438,6 +458,24 @@ def add_night_equalization(
     diff = model.new_int_var(0, len(dates), "night_diff")
     model.add(diff == max_night - min_night)
     return diff
+
+
+def add_external_night_count(
+    model: cp_model.CpModel,
+    x: VarDict,
+    member_ids: list[int],
+    dates: list[datetime.date],
+    member_external_nights: dict[int, int],
+) -> None:
+    """H17: 他院夜勤回数 == 設定値（0の場合は全日禁止）"""
+    for m in member_ids:
+        ext_count = member_external_nights.get(m, 0)
+        ext_vars = [x[m][str(d)][s] for d in dates for s in EXTERNAL_NIGHT_TYPES]
+        if ext_count == 0:
+            for v in ext_vars:
+                model.add(v == 0)
+        else:
+            model.add(sum(ext_vars) == ext_count)
 
 
 def add_holiday_equalization(

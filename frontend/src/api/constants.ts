@@ -114,6 +114,7 @@ export const SHIFT_TYPE_LABEL: Record<ShiftType, string> = {
   outpatient_free: '外来F',
   night_leader: '夜L',
   night: '夜勤',
+  external_night: '他夜',
   day_off: '公休',
   paid_leave: '有給',
 }

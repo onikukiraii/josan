@@ -23,6 +23,7 @@ def _to_response(member: Member) -> MemberResponse:
         employment_type=member.employment_type,
         max_night_shifts=member.max_night_shifts,
         min_night_shifts=member.min_night_shifts,
+        external_night_count=member.external_night_count,
         position=member.position,
         night_shift_deduction_balance=member.night_shift_deduction_balance,
         capabilities=[cap.capability_type for cap in member.capabilities],
@@ -54,6 +55,7 @@ def create_member(params: MemberCreateParams, db: Session = Depends(get_db)) -> 
         employment_type=params.employment_type,
         max_night_shifts=params.max_night_shifts,
         min_night_shifts=params.min_night_shifts,
+        external_night_count=params.external_night_count,
         position=max_pos + 1,
     )
     db.add(member)
@@ -83,10 +85,14 @@ def update_member(member_id: int, params: MemberUpdateParams, db: Session = Depe
         member.max_night_shifts = params.max_night_shifts
     if params.min_night_shifts is not None:
         member.min_night_shifts = params.min_night_shifts
+    if params.external_night_count is not None:
+        member.external_night_count = params.external_night_count
 
     # クロスバリデーション: min <= max
     if member.min_night_shifts > member.max_night_shifts:
         raise HTTPException(status_code=422, detail="夜勤確定回数は夜勤上限以下にしてください")
+    if member.external_night_count > member.max_night_shifts:
+        raise HTTPException(status_code=422, detail="他院夜勤回数は夜勤上限以下にしてください")
 
     if params.capabilities is not None:
         _sync_capabilities(db, member, params.capabilities)

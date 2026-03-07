@@ -16,6 +16,7 @@ class Member(Base):
     employment_type = Column(Enum(EmploymentType), nullable=False)
     max_night_shifts = Column(Integer, nullable=False, default=4)
     min_night_shifts = Column(Integer, nullable=False, default=0)
+    external_night_count = Column(Integer, nullable=False, default=0)
     position = Column(Integer, nullable=False, default=0)
     night_shift_deduction_balance = Column(Integer, nullable=False, default=0)
     created_at = Column(DateTime, default=lambda: datetime.now(UTC))

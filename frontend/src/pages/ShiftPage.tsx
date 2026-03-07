@@ -38,9 +38,10 @@ const DISPLAY_SHIFT_TYPES: ShiftType[] = [
   'ward_free',
   'night_leader',
   'night',
+  'external_night',
 ]
 
-const NIGHT_SHIFT_TYPES: ShiftType[] = ['night_leader', 'night']
+const NIGHT_SHIFT_TYPES: ShiftType[] = ['night_leader', 'night', 'external_night']
 
 const SHIFT_TYPE_TO_CAPABILITY: Partial<Record<ShiftType, string>> = {
   outpatient_leader: 'outpatient_leader',
@@ -50,6 +51,7 @@ const SHIFT_TYPE_TO_CAPABILITY: Partial<Record<ShiftType, string>> = {
   ward: 'ward_staff',
   night_leader: 'night_leader',
   night: 'night_shift',
+  external_night: 'night_shift',
   treatment_room: 'day_shift',
   delivery: 'day_shift',
   delivery_charge: 'day_shift',
@@ -539,6 +541,7 @@ export function ShiftPage() {
                       <TableHead className="font-semibold text-brand-800 text-center">公休</TableHead>
                       <TableHead className="font-semibold text-brand-800 text-center">有給</TableHead>
                       <TableHead className="font-semibold text-brand-800 text-center">夜勤回数</TableHead>
+                      <TableHead className="font-semibold text-brand-800 text-center">他院夜勤</TableHead>
                       <TableHead className="font-semibold text-brand-800 text-center">早番</TableHead>
                       <TableHead className="font-semibold text-brand-800 text-center">日祝出勤</TableHead>
                       <TableHead className="font-semibold text-brand-800 text-center">希望休</TableHead>
@@ -592,6 +595,9 @@ export function ShiftPage() {
                           </TableCell>
                           <TableCell className="text-center text-warm-gray-700">
                             {ms.night_shift_count}
+                          </TableCell>
+                          <TableCell className="text-center text-warm-gray-700">
+                            {ms.external_night_count}
                           </TableCell>
                           <TableCell className="text-center text-warm-gray-700">
                             {ms.early_shift_count}

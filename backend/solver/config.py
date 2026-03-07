@@ -121,6 +121,8 @@ NIGHT_SHIFT_TYPES = {ShiftType.night_leader, ShiftType.night}
 
 OFF_DAY_TYPES = {ShiftType.day_off, ShiftType.paid_leave}
 
+EXTERNAL_NIGHT_TYPES = {ShiftType.external_night}
+
 WARD_SHIFT_TYPES = {
     ShiftType.ward_leader,
     ShiftType.ward,

@@ -16,6 +16,8 @@ def _make_member(
     qualification: Qualification = Qualification.midwife,
     employment_type: EmploymentType = EmploymentType.full_time,
     max_night_shifts: int = 4,
+    min_night_shifts: int = 0,
+    external_night_count: int = 0,
     night_shift_deduction_balance: int = 0,
 ) -> SimpleNamespace:
     return SimpleNamespace(
@@ -24,6 +26,8 @@ def _make_member(
         qualification=qualification,
         employment_type=employment_type,
         max_night_shifts=max_night_shifts,
+        min_night_shifts=min_night_shifts,
+        external_night_count=external_night_count,
         night_shift_deduction_balance=night_shift_deduction_balance,
     )
 
@@ -56,10 +60,26 @@ class TestOffDayCalculation:
         caps = {m.id: _full_caps() for m in members}
         quals = {m.id: m.qualification for m in members}
         max_nights = {m.id: m.max_night_shifts for m in members}
+        min_nights = {m.id: m.min_night_shifts for m in members}
+        external_nights = {m.id: m.external_night_count for m in members}
         ng_pairs: list[tuple[int, int]] = []
-        request_map: dict[int, list[datetime.date]] = {}
+        request_map: dict[int, list[tuple[datetime.date, ShiftType]]] = {}
+        day_shift_request_map: dict[int, list[datetime.date]] = {}
         pediatric_dates: set[datetime.date] = set()
-        return members, caps, quals, max_nights, ng_pairs, request_map, pediatric_dates
+        prev_night_member_ids: set[int] = set()
+        return (
+            members,
+            caps,
+            quals,
+            max_nights,
+            min_nights,
+            external_nights,
+            ng_pairs,
+            request_map,
+            day_shift_request_map,
+            pediatric_dates,
+            prev_night_member_ids,
+        )
 
     def test_full_time_normal(self) -> None:
         """常勤・31日月・balance=0, nights=5 → off=10"""
@@ -89,7 +109,7 @@ class TestOffDayCalculation:
         with patch("solver.generator._load_data", return_value=load_return):
             assignments, _ = generate_shift(None, "2025-01")  # type: ignore[arg-type]
         off_count = sum(1 for a in assignments if a["member_id"] == 15 and a["shift_type"] == ShiftType.day_off)
-        expected_off = 31 - 3  # 28
+        expected_off = get_base_off_days(31)  # 10
         assert off_count >= expected_off
 
 
@@ -99,7 +119,21 @@ class TestGenerateShiftIntegration:
         caps = {m.id: _full_caps() for m in members}
         quals = {m.id: Qualification.midwife for m in members}
         max_nights = {m.id: 5 for m in members}
-        load_return: tuple = (members, caps, quals, max_nights, [], {}, set())
+        min_nights = {m.id: 0 for m in members}
+        external_nights = {m.id: 0 for m in members}
+        load_return: tuple = (
+            members,
+            caps,
+            quals,
+            max_nights,
+            min_nights,
+            external_nights,
+            [],
+            {},
+            {},
+            set(),
+            set(),
+        )
         with patch("solver.generator._load_data", return_value=load_return):
             assignments, unfulfilled = generate_shift(None, "2025-01")  # type: ignore[arg-type]
         assert len(assignments) > 0
@@ -110,7 +144,21 @@ class TestGenerateShiftIntegration:
         caps = {m.id: _full_caps() for m in members}
         quals = {m.id: Qualification.midwife for m in members}
         max_nights = {m.id: 5 for m in members}
-        load_return: tuple = (members, caps, quals, max_nights, [], {}, set())
+        min_nights = {m.id: 0 for m in members}
+        external_nights = {m.id: 0 for m in members}
+        load_return: tuple = (
+            members,
+            caps,
+            quals,
+            max_nights,
+            min_nights,
+            external_nights,
+            [],
+            {},
+            {},
+            set(),
+            set(),
+        )
         with patch("solver.generator._load_data", return_value=load_return):
             assignments, _ = generate_shift(None, "2025-01")  # type: ignore[arg-type]
         a = assignments[0]
@@ -125,7 +173,21 @@ class TestGenerateShiftIntegration:
         caps = {1: _full_caps()}
         quals = {1: Qualification.midwife}
         max_nights = {1: 4}
-        load_return: tuple = (members, caps, quals, max_nights, [], {}, set())
+        min_nights = {1: 0}
+        external_nights = {1: 0}
+        load_return: tuple = (
+            members,
+            caps,
+            quals,
+            max_nights,
+            min_nights,
+            external_nights,
+            [],
+            {},
+            {},
+            set(),
+            set(),
+        )
         with patch("solver.generator._load_data", return_value=load_return):
             with pytest.raises(RuntimeError):
-                generate_shift(None, "2025-01")  # type: ignore[arg-type]
+                generate_shift(None, "2025-01")  # type: ignore[arg-type]  # type: ignore[arg-type]

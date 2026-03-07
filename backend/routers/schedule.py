@@ -26,6 +26,7 @@ from solver.validators import check_assignment_warnings
 router = APIRouter(prefix="/schedules", tags=["schedules"])
 
 NIGHT_SHIFTS = {ShiftType.night_leader, ShiftType.night}
+NON_WORKING_TYPES = {ShiftType.day_off}
 
 
 def _assignment_to_response(a: ShiftAssignment) -> ShiftAssignmentResponse:
@@ -282,10 +283,11 @@ def get_schedule_summary(schedule_id: int, db: Session = Depends(get_db)) -> Sch
     member_summaries: list[MemberSummary] = []
     for member in members:
         member_assignments = [a for a in assignments if a.member_id == member.id]
-        working = [a for a in member_assignments if a.shift_type != ShiftType.day_off]
+        working = [a for a in member_assignments if a.shift_type not in NON_WORKING_TYPES]
         day_offs = [a for a in member_assignments if a.shift_type == ShiftType.day_off]
         paid_leaves = [a for a in member_assignments if a.shift_type == ShiftType.paid_leave]
         nights = [a for a in member_assignments if a.shift_type in NIGHT_SHIFTS]
+        external_nights = [a for a in member_assignments if a.shift_type == ShiftType.external_night]
         early_shifts = [a for a in member_assignments if a.is_early]
         holidays = [a for a in working if a.date.weekday() == 6]  # Sunday
 
@@ -317,6 +319,7 @@ def get_schedule_summary(schedule_id: int, db: Session = Depends(get_db)) -> Sch
                 day_off_count=len(day_offs),
                 paid_leave_count=len(paid_leaves),
                 night_shift_count=len(nights),
+                external_night_count=len(external_nights),
                 early_shift_count=len(early_shifts),
                 holiday_work_count=len(holidays),
                 request_fulfilled=fulfilled,

@@ -9,6 +9,7 @@ from entity.member import Member
 from entity.shift_assignment import ShiftAssignment
 
 NIGHT_SHIFT_TYPES = {ShiftType.night_leader, ShiftType.night}
+ALL_NIGHT_TYPES = NIGHT_SHIFT_TYPES | {ShiftType.external_night}
 MAX_CONSECUTIVE_WORK_DAYS = 5
 
 
@@ -27,7 +28,7 @@ def check_assignment_warnings(
 
     assignments = db.query(ShiftAssignment).filter(ShiftAssignment.schedule_id == schedule_id).all()
 
-    warnings.extend(_check_h6_night_rest(assignments, member, date))
+    warnings.extend(_check_h6_night_rest(assignments, member, date, db))
     warnings.extend(_check_h8_night_midwife(assignments, member, date))
     warnings.extend(_check_h9_consecutive_work(assignments, member, date))
     warnings.extend(_check_h10_night_limit(assignments, member))
@@ -52,6 +53,7 @@ def _check_h6_night_rest(
     assignments: list[ShiftAssignment],
     member: Member,
     date: dt.date,
+    db: Session | None = None,
 ) -> list[str]:
     """H6: 夜勤翌日は休み."""
     warnings: list[str] = []
@@ -59,15 +61,31 @@ def _check_h6_night_rest(
     prev_shift = _get_shift_type_for(assignments, member.id, date - dt.timedelta(days=1))
     next_shift = _get_shift_type_for(assignments, member.id, date + dt.timedelta(days=1))
 
+    # 前日が同一スケジュール内に無い場合、前月スケジュールを確認
+    if prev_shift is None and db is not None:
+        prev_shift = _get_prev_month_shift(db, member.id, date - dt.timedelta(days=1))
+
     # 前日が夜勤 → 今日は公休であるべき
-    if prev_shift in NIGHT_SHIFT_TYPES and today_shift is not None and today_shift != ShiftType.day_off:
+    if prev_shift in ALL_NIGHT_TYPES and today_shift is not None and today_shift != ShiftType.day_off:
         warnings.append(f"{member.name} は前日に夜勤のため、本日は公休が必要です")
 
     # 今日が夜勤 → 翌日は公休であるべき
-    if today_shift in NIGHT_SHIFT_TYPES and next_shift is not None and next_shift != ShiftType.day_off:
+    if today_shift in ALL_NIGHT_TYPES and next_shift is not None and next_shift != ShiftType.day_off:
         warnings.append(f"{member.name} は本日夜勤のため、翌日は公休が必要です")
 
     return warnings
+
+
+def _get_prev_month_shift(
+    db: Session,
+    member_id: int,
+    date: dt.date,
+) -> ShiftType | None:
+    """別スケジュール（前月）から指定日のシフトを取得."""
+    assignment = (
+        db.query(ShiftAssignment).filter(ShiftAssignment.member_id == member_id, ShiftAssignment.date == date).first()
+    )
+    return assignment.shift_type if assignment else None
 
 
 def _check_h8_night_midwife(
@@ -127,11 +145,11 @@ def _check_h10_night_limit(
     assignments: list[ShiftAssignment],
     member: Member,
 ) -> list[str]:
-    """H10: 夜勤月間上限."""
+    """H10: 院内夜勤月間上限."""
     night_count = sum(1 for a in assignments if a.member_id == member.id and a.shift_type in NIGHT_SHIFT_TYPES)
-    max_nights: int = member.max_night_shifts
+    max_nights: int = member.max_night_shifts - member.external_night_count
     if night_count > max_nights:
-        return [f"{member.name} の夜勤回数が {night_count} 回になっています（上限{max_nights}回）"]
+        return [f"{member.name} の院内夜勤回数が {night_count} 回になっています（上限{max_nights}回）"]
     return []
 
 
@@ -139,11 +157,11 @@ def _check_h16_night_minimum(
     assignments: list[ShiftAssignment],
     member: Member,
 ) -> list[str]:
-    """H16: 夜勤確定回数."""
-    min_nights: int = member.min_night_shifts
+    """H16: 夜勤確定回数（他院夜勤を含む）."""
+    min_nights: int = member.min_night_shifts - member.external_night_count
     if min_nights <= 0:
         return []
     night_count = sum(1 for a in assignments if a.member_id == member.id and a.shift_type in NIGHT_SHIFT_TYPES)
     if night_count < min_nights:
-        return [f"{member.name} の夜勤回数が {night_count} 回になっています（確定{min_nights}回）"]
+        return [f"{member.name} の院内夜勤回数が {night_count} 回になっています（確定{min_nights}回）"]
     return []

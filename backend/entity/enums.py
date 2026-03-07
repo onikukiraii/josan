@@ -74,6 +74,7 @@ class ShiftType(str, enum.Enum):
     outpatient_free = "outpatient_free"
     night_leader = "night_leader"
     night = "night"
+    external_night = "external_night"
     day_off = "day_off"
     paid_leave = "paid_leave"
 
@@ -92,6 +93,7 @@ class ShiftType(str, enum.Enum):
             "outpatient_free": "外来F",
             "night_leader": "夜L",
             "night": "夜勤",
+            "external_night": "他夜",
             "day_off": "公休",
             "paid_leave": "有給",
         }

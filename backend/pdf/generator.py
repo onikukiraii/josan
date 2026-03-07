@@ -24,6 +24,7 @@ SHIFT_TYPE_LABELS: dict[ShiftType, str] = {
     ShiftType.outpatient_free: "外来F",
     ShiftType.night_leader: "夜勤L",
     ShiftType.night: "夜勤",
+    ShiftType.external_night: "他夜",
 }
 
 DISPLAY_SHIFT_TYPES = [
@@ -39,6 +40,7 @@ DISPLAY_SHIFT_TYPES = [
     ShiftType.ward_free,
     ShiftType.night_leader,
     ShiftType.night,
+    ShiftType.external_night,
 ]
 
 WEEKDAY_JP = ["月", "火", "水", "木", "金", "土", "日"]

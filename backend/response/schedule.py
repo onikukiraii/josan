@@ -42,6 +42,7 @@ class MemberSummary(BaseModel):
     day_off_count: int = Field(title="公休数")
     paid_leave_count: int = Field(default=0, title="有給数")
     night_shift_count: int = Field(title="夜勤回数")
+    external_night_count: int = Field(default=0, title="他院夜勤回数")
     holiday_work_count: int = Field(title="日祝出勤数")
     early_shift_count: int = Field(default=0, title="早番回数")
     request_fulfilled: int = Field(title="希望休充足数")
