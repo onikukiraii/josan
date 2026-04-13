@@ -23,6 +23,7 @@ def diagnose_infeasibility(
     member_off_days: dict[int, int],
     dates: list[datetime.date],
     member_external_nights: dict[int, int] | None = None,
+    part_time_ids: set[int] | None = None,
 ) -> list[str]:
     """制約条件を満たせない原因を診断し、問題点のリストを返す。"""
     problems: list[str] = []
@@ -125,17 +126,11 @@ def diagnose_infeasibility(
         )
 
     # 6. 個人別の勤務日数充足チェック
+    pt = part_time_ids or set()
     for m in member_ids:
         caps = member_capabilities.get(m, set())
-        off = member_off_days.get(m, 10)
-        required_work = len(dates) - off
-        max_nights = member_max_nights.get(m, 4)
-
         can_day = CapabilityType.day_shift in caps
         can_night = CapabilityType.night_shift in caps or CapabilityType.night_leader in caps
-
-        if can_day and can_night:
-            continue
 
         if not can_day and not can_night:
             problems.append(
@@ -143,6 +138,17 @@ def diagnose_infeasibility(
                 f"シフトに配置できません。能力設定を確認してください。"
             )
             continue
+
+        # 非常勤は公休日数が可変（>= 最低保証）なので勤務日数チェックをスキップ
+        if m in pt:
+            continue
+
+        if can_day and can_night:
+            continue
+
+        off = member_off_days.get(m, 10)
+        required_work = len(dates) - off
+        max_nights = member_max_nights.get(m, 4)
 
         if can_night and not can_day:
             if max_nights < required_work:

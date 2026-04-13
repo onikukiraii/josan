@@ -80,13 +80,15 @@ export function MonthlySettingsPage() {
       const prevMap = new Map(currentMap)
       const currentType = currentMap.get(dateStr)
 
-      // 4状態サイクル: 空 → 公休 → 有給 → 日勤希望 → 空
+      // 5状態サイクル: 空 → 公休 → 有給 → 日勤希望 → 夜勤希望 → 空
       if (!currentType) {
         currentMap.set(dateStr, 'day_off')
       } else if (currentType === 'day_off') {
         currentMap.set(dateStr, 'paid_leave')
       } else if (currentType === 'paid_leave') {
         currentMap.set(dateStr, 'day_shift_request')
+      } else if (currentType === 'day_shift_request') {
+        currentMap.set(dateStr, 'night_shift_request')
       } else {
         currentMap.delete(dateStr)
       }
@@ -253,6 +255,10 @@ export function MonthlySettingsPage() {
               <span className="inline-block w-2 h-2 rounded-full bg-green-500" />
               日勤希望
             </span>
+            <span className="flex items-center gap-1">
+              <span className="inline-block w-2 h-2 rounded-full bg-purple-500" />
+              夜勤希望
+            </span>
           </div>
         </div>
 
@@ -328,14 +334,16 @@ export function MonthlySettingsPage() {
                                 ? 'bg-orange-50 hover:bg-orange-100'
                                 : requestType === 'day_shift_request'
                                   ? 'bg-green-50 hover:bg-green-100'
-                                  : 'hover:bg-warm-gray-100'
+                                  : requestType === 'night_shift_request'
+                                    ? 'bg-purple-50 hover:bg-purple-100'
+                                    : 'hover:bg-warm-gray-100'
                           } ${isSaving ? 'opacity-50' : ''}`}
                           onClick={() => toggleShiftRequest(member.id, dateStr)}
                         >
                           {requestType && (
                             <div className="flex items-center justify-center">
                               <div className={`w-2 h-2 rounded-full ${
-                                requestType === 'paid_leave' ? 'bg-orange-500' : requestType === 'day_shift_request' ? 'bg-green-500' : 'bg-brand-500'
+                                requestType === 'paid_leave' ? 'bg-orange-500' : requestType === 'day_shift_request' ? 'bg-green-500' : requestType === 'night_shift_request' ? 'bg-purple-500' : 'bg-brand-500'
                               }`} />
                             </div>
                           )}

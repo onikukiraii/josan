@@ -276,7 +276,7 @@ def get_schedule_summary(schedule_id: int, db: Session = Depends(get_db)) -> Sch
     request_entries_by_member: dict[int, list[tuple[str, str]]] = {}
     for r in requests:
         rt = r.request_type.value if hasattr(r.request_type, "value") else str(r.request_type)
-        if rt == "day_shift_request":
+        if rt in ("day_shift_request", "night_shift_request"):
             continue
         request_entries_by_member.setdefault(r.member_id, []).append((str(r.date), rt))
 
@@ -319,6 +319,7 @@ def get_schedule_summary(schedule_id: int, db: Session = Depends(get_db)) -> Sch
                 day_off_count=len(day_offs),
                 paid_leave_count=len(paid_leaves),
                 night_shift_count=len(nights),
+                night_shift_shortfall=max(0, member.min_night_shifts - len(nights) - member.external_night_count),
                 external_night_count=len(external_nights),
                 early_shift_count=len(early_shifts),
                 holiday_work_count=len(holidays),

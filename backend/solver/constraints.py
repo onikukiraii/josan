@@ -244,6 +244,28 @@ def add_night_shift_minimum(
         model.add(sum(night_vars) >= min_n)
 
 
+def add_night_shift_minimum_soft(
+    model: cp_model.CpModel,
+    x: VarDict,
+    member_ids: list[int],
+    dates: list[datetime.date],
+    member_min_nights: dict[int, int],
+    member_external_nights: dict[int, int] | None = None,
+) -> list[cp_model.IntVar]:
+    """H16 soft: 夜勤確定回数をできるだけ守る。不足分を返す。"""
+    ext = member_external_nights or {}
+    shortfall_vars: list[cp_model.IntVar] = []
+    for m in member_ids:
+        min_n = member_min_nights.get(m, 0) - ext.get(m, 0)
+        if min_n <= 0:
+            continue
+        night_vars = [x[m][str(d)][ns] for d in dates for ns in NIGHT_SHIFT_TYPES]
+        shortfall = model.new_int_var(0, min_n, f"night_min_shortfall_{m}")
+        model.add(shortfall >= min_n - sum(night_vars))
+        shortfall_vars.append(shortfall)
+    return shortfall_vars
+
+
 def add_off_day_count(
     model: cp_model.CpModel,
     x: VarDict,
@@ -431,6 +453,19 @@ def add_day_shift_request_soft(
             model.add(sum(day_vars) == 0).only_enforce_if(is_day.negated())
             fulfilled_vars.append(is_day)
     return fulfilled_vars
+
+
+def add_night_shift_request_hard(
+    model: cp_model.CpModel,
+    x: VarDict,
+    night_shift_request_map: dict[int, list[datetime.date]],
+) -> None:
+    """H18: 夜勤希望を確定（ハード制約）。NIGHT_SHIFT_TYPES のいずれかに配置を強制。"""
+    for m, req_dates in night_shift_request_map.items():
+        for d in req_dates:
+            ds = str(d)
+            night_vars = [x[m][ds][s] for s in NIGHT_SHIFT_TYPES]
+            model.add(sum(night_vars) >= 1)
 
 
 def add_night_equalization(

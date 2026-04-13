@@ -395,6 +395,11 @@ export interface components {
             /** 夜勤回数 */
             night_shift_count: number;
             /**
+             * 夜勤確定回数不足
+             * @default 0
+             */
+            night_shift_shortfall: number;
+            /**
              * 他院夜勤回数
              * @default 0
              */

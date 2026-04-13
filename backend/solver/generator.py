@@ -28,6 +28,8 @@ from solver.constraints import (
     add_night_shift_eligibility,
     add_night_shift_limit,
     add_night_shift_minimum,
+    add_night_shift_minimum_soft,
+    add_night_shift_request_hard,
     add_night_then_off,
     add_off_day_count,
     add_one_shift_per_day,
@@ -59,6 +61,7 @@ CONSTRAINT_LABELS: dict[str, str] = {
     "H15": "平日に早番1名配置",
     "H16": "夜勤確定回数（最低保証）",
     "H17": "他院夜勤回数",
+    "H18": "夜勤希望（確定）",
 }
 
 
@@ -74,14 +77,18 @@ def _load_data(
     list[tuple[int, int]],
     dict[int, list[tuple[datetime.date, ShiftType]]],
     dict[int, list[datetime.date]],
+    dict[int, list[datetime.date]],
     set[datetime.date],
     set[int],
 ]:
-    members = db.query(Member).order_by(Member.id).all()
+    all_members = db.query(Member).order_by(Member.id).all()
 
     member_capabilities: dict[int, set[CapabilityType]] = {}
     for cap in db.query(MemberCapability).all():
         member_capabilities.setdefault(cap.member_id, set()).add(cap.capability_type)
+
+    # 能力が1つも設定されていないメンバーはシフト生成対象外
+    members = [m for m in all_members if member_capabilities.get(m.id)]
 
     member_qualifications: dict[int, Qualification] = {m.id: m.qualification for m in members}
     member_max_nights: dict[int, int] = {m.id: m.max_night_shifts for m in members}
@@ -94,9 +101,12 @@ def _load_data(
     requests_raw = db.query(ShiftRequest).filter(ShiftRequest.year_month == year_month).all()
     request_map: dict[int, list[tuple[datetime.date, ShiftType]]] = {}
     day_shift_request_map: dict[int, list[datetime.date]] = {}
+    night_shift_request_map: dict[int, list[datetime.date]] = {}
     for r in requests_raw:
         if r.request_type == RequestType.day_shift_request:
             day_shift_request_map.setdefault(r.member_id, []).append(r.date)
+        elif r.request_type == RequestType.night_shift_request:
+            night_shift_request_map.setdefault(r.member_id, []).append(r.date)
         else:
             shift_type = ShiftType.paid_leave if r.request_type == RequestType.paid_leave else ShiftType.day_off
             request_map.setdefault(r.member_id, []).append((r.date, shift_type))
@@ -145,6 +155,7 @@ def _load_data(
         ng_pairs,
         request_map,
         day_shift_request_map,
+        night_shift_request_map,
         pediatric_dates,
         prev_night_member_ids,
     )
@@ -286,6 +297,7 @@ def generate_shift(db: Session, year_month: str) -> tuple[list[dict[str, object]
         ng_pairs,
         request_map,
         day_shift_request_map,
+        night_shift_request_map,
         pediatric_dates,
         prev_night_member_ids,
     ) = _load_data(db, year_month)
@@ -309,6 +321,20 @@ def generate_shift(db: Session, year_month: str) -> tuple[list[dict[str, object]
 
         member_off_days[m.id] = off
 
+    # 夜勤希望の事前バリデーション
+    member_name_map = {m.id: m.name for m in members}
+    for m_id, req_dates in night_shift_request_map.items():
+        caps = member_capabilities.get(m_id, set())
+        if CapabilityType.night_shift not in caps and CapabilityType.night_leader not in caps:
+            name = member_name_map.get(m_id, str(m_id))
+            raise RuntimeError(
+                f"{name}は夜勤不可ですが夜勤希望が設定されています。夜勤希望を削除するか、夜勤能力を追加してください。"
+            )
+        max_n = member_max_nights.get(m_id, 4) - member_external_nights.get(m_id, 0)
+        if len(req_dates) > max_n:
+            name = member_name_map.get(m_id, str(m_id))
+            raise RuntimeError(f"{name}の夜勤希望({len(req_dates)}日)が夜勤上限({max_n}回)を超えています。")
+
     # Step 1: 希望休をハード制約
     model = cp_model.CpModel()
     x = _create_variables(model, member_ids, dates)
@@ -330,6 +356,7 @@ def generate_shift(db: Session, year_month: str) -> tuple[list[dict[str, object]
         prev_night_member_ids=prev_night_member_ids,
     )
     add_shift_request_hard(model, x, request_map)
+    add_night_shift_request_hard(model, x, night_shift_request_map)
     add_paid_leave_only_requested(model, x, member_ids, dates, request_map)
 
     night_diff = add_night_equalization(model, x, member_ids, dates)
@@ -368,6 +395,7 @@ def generate_shift(db: Session, year_month: str) -> tuple[list[dict[str, object]
         )
 
         fulfilled_vars = add_shift_request_soft(model, x, request_map)
+        add_night_shift_request_hard(model, x, night_shift_request_map)
         add_paid_leave_only_requested(model, x, member_ids, dates, request_map)
         night_diff = add_night_equalization(model, x, member_ids, dates)
         holiday_diff = add_holiday_equalization(model, x, member_ids, dates)
@@ -390,49 +418,102 @@ def generate_shift(db: Session, year_month: str) -> tuple[list[dict[str, object]
         status = solver.solve(model)
 
         if status not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
-            member_name_map = {m.id: m.name for m in members}
-            problems = diagnose_infeasibility(
+            logger.info("Step 2 infeasible. Trying Step 3 with soft night minimum.")
+            # Step 3: H16（夜勤確定回数）をソフト制約に緩和
+            model = cp_model.CpModel()
+            x = _create_variables(model, member_ids, dates)
+            early = _add_hard_constraints(
+                model,
+                x,
                 member_ids,
-                member_name_map,
+                dates,
                 member_capabilities,
                 member_qualifications,
                 member_max_nights,
+                member_min_nights,
                 member_off_days,
-                dates,
+                ng_pairs,
+                pediatric_dates,
+                rookie_ids,
                 member_external_nights=member_external_nights,
+                part_time_ids=part_time_ids,
+                skip_constraints={"H16"},
+                prev_night_member_ids=prev_night_member_ids,
             )
-            if problems:
-                detail = "以下の問題が見つかりました:\n" + "\n".join(f"・{p}" for p in problems)
+
+            fulfilled_vars = add_shift_request_soft(model, x, request_map)
+            add_night_shift_request_hard(model, x, night_shift_request_map)
+            add_paid_leave_only_requested(model, x, member_ids, dates, request_map)
+            night_min_shortfall = add_night_shift_minimum_soft(
+                model, x, member_ids, dates, member_min_nights, member_external_nights
+            )
+            night_diff = add_night_equalization(model, x, member_ids, dates)
+            holiday_diff = add_holiday_equalization(model, x, member_ids, dates)
+            if early:
+                early_diff = add_early_equalization(model, early, dates)
             else:
-                # 静的診断で見つからない場合、制約緩和による診断を実行
-                logger.info("Static diagnostics found no issues. Running constraint relaxation diagnosis.")
-                relaxable = _diagnose_by_relaxation(
+                early_diff = model.new_int_var(0, 0, "early_diff_zero_s3")
+            day_shift_fulfilled = add_day_shift_request_soft(model, x, day_shift_request_map)
+
+            model.maximize(
+                sum(fulfilled_vars) * 100
+                + sum(day_shift_fulfilled) * 2
+                - sum(night_min_shortfall) * 50
+                - night_diff * 10
+                - holiday_diff * 5
+                - early_diff * 3
+            )
+
+            solver = cp_model.CpSolver()
+            solver.parameters.max_time_in_seconds = SOLVER_TIMEOUT_SECONDS
+            status = solver.solve(model)
+
+            if status not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
+                member_name_map = {m.id: m.name for m in members}
+                problems = diagnose_infeasibility(
                     member_ids,
-                    dates,
+                    member_name_map,
                     member_capabilities,
                     member_qualifications,
                     member_max_nights,
-                    member_min_nights,
                     member_off_days,
-                    ng_pairs,
-                    pediatric_dates,
-                    rookie_ids,
+                    dates,
                     member_external_nights=member_external_nights,
                     part_time_ids=part_time_ids,
                 )
-                if relaxable:
-                    detail = (
-                        "制約の組み合わせにより解が見つかりませんでした。\n"
-                        "以下の制約を見直すと解決する可能性があります:\n" + "\n".join(f"・{r}" for r in relaxable)
-                    )
+                if problems:
+                    detail = "以下の問題が見つかりました:\n" + "\n".join(f"・{p}" for p in problems)
                 else:
-                    detail = (
-                        "制約条件を満たすシフトの組み合わせが見つかりませんでした。"
-                        "メンバー数や希望休、NGペアの設定を見直してください。"
+                    logger.info("Static diagnostics found no issues. Running constraint relaxation diagnosis.")
+                    relaxable = _diagnose_by_relaxation(
+                        member_ids,
+                        dates,
+                        member_capabilities,
+                        member_qualifications,
+                        member_max_nights,
+                        member_min_nights,
+                        member_off_days,
+                        ng_pairs,
+                        pediatric_dates,
+                        rookie_ids,
+                        member_external_nights=member_external_nights,
+                        part_time_ids=part_time_ids,
                     )
-            raise RuntimeError(detail)
+                    if relaxable:
+                        detail = (
+                            "制約の組み合わせにより解が見つかりませんでした。\n"
+                            "以下の制約を見直すと解決する可能性があります:\n" + "\n".join(f"・{r}" for r in relaxable)
+                        )
+                    else:
+                        detail = (
+                            "制約条件を満たすシフトの組み合わせが見つかりませんでした。"
+                            "メンバー数や希望休、NGペアの設定を見直してください。"
+                        )
+                raise RuntimeError(detail)
 
-        # Step 3: 叶えられなかった希望休を特定
+            logger.warning("Step 3: 夜勤確定回数（H16）をソフト制約に緩和して生成しました。")
+
+        # 叶えられなかった希望休を特定
         member_name_map = {m.id: m.name for m in members}
         for m_id, entries in request_map.items():
             for d, shift_type in entries:

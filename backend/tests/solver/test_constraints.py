@@ -16,6 +16,7 @@ from solver.constraints import (
     add_night_shift_eligibility,
     add_night_shift_limit,
     add_night_shift_minimum,
+    add_night_shift_request_hard,
     add_night_then_off,
     add_off_day_count,
     add_one_shift_per_day,
@@ -809,3 +810,31 @@ class TestS5DayShiftRequest:
         add_one_shift_per_day(model, x, [1], two_day_dates)
         fulfilled = add_day_shift_request_soft(model, x, {})
         assert len(fulfilled) == 0
+
+
+class TestH18NightShiftRequest:
+    def test_night_shift_forced(self, two_day_dates: list[datetime.date]) -> None:
+        """夜勤希望日に夜勤系シフトが強制配置される"""
+        from solver.config import NIGHT_SHIFT_TYPES
+
+        model, x = make_model_and_vars([1], two_day_dates)
+        add_one_shift_per_day(model, x, [1], two_day_dates)
+        add_night_shift_request_hard(model, x, {1: [two_day_dates[0]]})
+        solver = assert_feasible(model)
+        night_total = sum(solver.value(x[1][str(two_day_dates[0])][s]) for s in NIGHT_SHIFT_TYPES)
+        assert night_total == 1
+
+    def test_empty_request_no_constraint(self, two_day_dates: list[datetime.date]) -> None:
+        """夜勤希望がない場合は制約なし"""
+        model, x = make_model_and_vars([1], two_day_dates)
+        add_one_shift_per_day(model, x, [1], two_day_dates)
+        add_night_shift_request_hard(model, x, {})
+        assert_feasible(model)
+
+    def test_conflict_with_day_off_infeasible(self, two_day_dates: list[datetime.date]) -> None:
+        """夜勤希望と公休希望が同日にある場合は解なし"""
+        model, x = make_model_and_vars([1], two_day_dates)
+        add_one_shift_per_day(model, x, [1], two_day_dates)
+        add_night_shift_request_hard(model, x, {1: [two_day_dates[0]]})
+        add_shift_request_hard(model, x, {1: [(two_day_dates[0], ShiftType.day_off)]})
+        assert_infeasible(model)

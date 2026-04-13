@@ -609,8 +609,13 @@ export function ShiftPage() {
                           <TableCell className="text-center text-warm-gray-700">
                             {ms.paid_leave_count}
                           </TableCell>
-                          <TableCell className="text-center text-warm-gray-700">
-                            {ms.night_shift_count}
+                          <TableCell className="text-center">
+                            <span className={ms.night_shift_shortfall > 0 ? 'text-warning font-medium' : 'text-warm-gray-700'}>
+                              {ms.night_shift_count}
+                              {ms.night_shift_shortfall > 0 && (
+                                <span className="text-[10px] ml-0.5">(-{ms.night_shift_shortfall})</span>
+                              )}
+                            </span>
                           </TableCell>
                           <TableCell className="text-center text-warm-gray-700">
                             {ms.external_night_count}

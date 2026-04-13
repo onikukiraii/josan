@@ -76,6 +76,23 @@ class TestDiagnoseInfeasibility:
         problems = diagnose_infeasibility([1], {1: "A"}, caps, quals, {1: 0}, {1: 0}, dates)
         assert any("日勤・夜勤どちら" in p for p in problems)
 
+    def test_part_time_night_only_skips_work_day_check(self) -> None:
+        """非常勤で夜勤のみ可能なメンバーは勤務日数不足の警告を出さない。"""
+        dates = _weekdays(5)
+        # member 1: 夜勤のみ、max_nights=2、off_days=0 → 常勤なら required_work=5 > 2 でエラー
+        caps = {1: {CapabilityType.night_shift}}
+        quals = {1: Qualification.nurse}
+        problems = diagnose_infeasibility([1], {1: "波戸本"}, caps, quals, {1: 2}, {1: 0}, dates, part_time_ids={1})
+        assert not any("必要勤務日数" in p for p in problems)
+
+    def test_part_time_no_capability_still_reported(self) -> None:
+        """非常勤でも能力なしのメンバーは警告を出す。"""
+        dates = _weekdays(1)
+        caps: dict[int, set[CapabilityType]] = {1: set()}
+        quals = {1: Qualification.nurse}
+        problems = diagnose_infeasibility([1], {1: "松澤"}, caps, quals, {1: 0}, {1: 0}, dates, part_time_ids={1})
+        assert any("日勤・夜勤どちら" in p for p in problems)
+
     def test_multiple_problems(self) -> None:
         dates = _weekdays(5)
         # Empty capabilities → many problems

@@ -65,6 +65,7 @@ class TestOffDayCalculation:
         ng_pairs: list[tuple[int, int]] = []
         request_map: dict[int, list[tuple[datetime.date, ShiftType]]] = {}
         day_shift_request_map: dict[int, list[datetime.date]] = {}
+        night_shift_request_map: dict[int, list[datetime.date]] = {}
         pediatric_dates: set[datetime.date] = set()
         prev_night_member_ids: set[int] = set()
         return (
@@ -77,6 +78,7 @@ class TestOffDayCalculation:
             ng_pairs,
             request_map,
             day_shift_request_map,
+            night_shift_request_map,
             pediatric_dates,
             prev_night_member_ids,
         )
@@ -131,6 +133,7 @@ class TestGenerateShiftIntegration:
             [],
             {},
             {},
+            {},
             set(),
             set(),
         )
@@ -154,6 +157,7 @@ class TestGenerateShiftIntegration:
             min_nights,
             external_nights,
             [],
+            {},
             {},
             {},
             set(),
@@ -183,6 +187,7 @@ class TestGenerateShiftIntegration:
             min_nights,
             external_nights,
             [],
+            {},
             {},
             {},
             set(),

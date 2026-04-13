@@ -41,7 +41,11 @@ class TestBulkUpdateShiftRequests:
             json={
                 "member_id": m.id,
                 "year_month": "2025-01",
-                "dates": ["2025-01-05", "2025-01-12", "2025-01-19"],
+                "entries": [
+                    {"date": "2025-01-05", "request_type": "day_off"},
+                    {"date": "2025-01-12", "request_type": "day_off"},
+                    {"date": "2025-01-19", "request_type": "paid_leave"},
+                ],
             },
         )
         assert resp.status_code == 200
@@ -51,11 +55,22 @@ class TestBulkUpdateShiftRequests:
         m = create_member(name="希望休置換")
         client.put(
             "/shift-requests/",
-            json={"member_id": m.id, "year_month": "2025-01", "dates": ["2025-01-05", "2025-01-12"]},
+            json={
+                "member_id": m.id,
+                "year_month": "2025-01",
+                "entries": [
+                    {"date": "2025-01-05", "request_type": "day_off"},
+                    {"date": "2025-01-12", "request_type": "day_off"},
+                ],
+            },
         )
         resp = client.put(
             "/shift-requests/",
-            json={"member_id": m.id, "year_month": "2025-01", "dates": ["2025-01-20"]},
+            json={
+                "member_id": m.id,
+                "year_month": "2025-01",
+                "entries": [{"date": "2025-01-20", "request_type": "day_off"}],
+            },
         )
         assert resp.status_code == 200
         data = resp.json()
@@ -66,11 +81,15 @@ class TestBulkUpdateShiftRequests:
         m = create_member(name="希望休全削除")
         client.put(
             "/shift-requests/",
-            json={"member_id": m.id, "year_month": "2025-01", "dates": ["2025-01-05"]},
+            json={
+                "member_id": m.id,
+                "year_month": "2025-01",
+                "entries": [{"date": "2025-01-05", "request_type": "day_off"}],
+            },
         )
         resp = client.put(
             "/shift-requests/",
-            json={"member_id": m.id, "year_month": "2025-01", "dates": []},
+            json={"member_id": m.id, "year_month": "2025-01", "entries": []},
         )
         assert resp.status_code == 200
         assert resp.json() == []
@@ -78,6 +97,10 @@ class TestBulkUpdateShiftRequests:
     def test_bulk_put_member_not_found(self, client: TestClient) -> None:
         resp = client.put(
             "/shift-requests/",
-            json={"member_id": 9999, "year_month": "2025-01", "dates": ["2025-01-05"]},
+            json={
+                "member_id": 9999,
+                "year_month": "2025-01",
+                "entries": [{"date": "2025-01-05", "request_type": "day_off"}],
+            },
         )
         assert resp.status_code == 404
