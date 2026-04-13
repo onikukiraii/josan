@@ -108,8 +108,13 @@ def generate_schedule_pdf(
             row.append("\n".join(names))
         table_data.append(row)
 
-    # カラム幅
-    col_widths = [25 * mm, 12 * mm] + [22 * mm] * len(DISPLAY_SHIFT_TYPES)
+    # カラム幅（ページ幅に収まるように動的計算）
+    page_width = landscape(A4)[0]
+    available_width = page_width - 10 * mm - 10 * mm  # left + right margin
+    date_col_width = 18 * mm
+    weekday_col_width = 10 * mm
+    shift_col_width = (available_width - date_col_width - weekday_col_width) / len(DISPLAY_SHIFT_TYPES)
+    col_widths = [date_col_width, weekday_col_width] + [shift_col_width] * len(DISPLAY_SHIFT_TYPES)
 
     table = Table(table_data, colWidths=col_widths, repeatRows=1)
     table.setStyle(
