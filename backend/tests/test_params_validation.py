@@ -26,7 +26,7 @@ class TestMemberCreateParams:
                 name="田中太郎",
                 qualification=Qualification.nurse,
                 employment_type=EmploymentType.full_time,
-                max_night_shifts=1,
+                max_night_shifts=0,
             )
 
     def test_member_create_max_nights_too_high(self) -> None:
@@ -35,7 +35,7 @@ class TestMemberCreateParams:
                 name="田中太郎",
                 qualification=Qualification.nurse,
                 employment_type=EmploymentType.full_time,
-                max_night_shifts=5,
+                max_night_shifts=7,
             )
 
     def test_member_create_default_capabilities(self) -> None:

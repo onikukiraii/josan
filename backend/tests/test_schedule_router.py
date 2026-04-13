@@ -58,7 +58,7 @@ class TestUpdateAssignment:
             json={"shift_type": "night", "member_id": m.id},
         )
         assert resp.status_code == 200
-        assert resp.json()["shift_type"] == "night"
+        assert resp.json()["assignment"]["shift_type"] == "night"
 
     def test_update_assignment_not_found(
         self,
@@ -109,7 +109,7 @@ class TestCreateAssignment:
             json={"date": "2025-01-06", "shift_type": "ward", "member_id": m.id},
         )
         assert resp.status_code == 201
-        data = resp.json()
+        data = resp.json()["assignment"]
         assert data["member_id"] == m.id
         assert data["shift_type"] == "ward"
         assert data["date"] == "2025-01-06"
@@ -198,7 +198,7 @@ class TestCreateAssignment:
             json={"date": "2025-01-10", "shift_type": "ward", "member_id": m.id},
         )
         assert resp.status_code == 201
-        data = resp.json()
+        data = resp.json()["assignment"]
         assert data["shift_type"] == "ward"
         assert data["member_id"] == m.id
 
