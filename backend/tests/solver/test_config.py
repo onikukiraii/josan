@@ -32,6 +32,10 @@ class TestGetDayType:
         # 2025-01-01 is 元日 (New Year's Day), a Wednesday
         assert get_day_type(datetime.date(2025, 1, 1)) == DayType.sunday_holiday
 
+    def test_weekday_override(self) -> None:
+        # 2026-05-06 is 振替休日 but treated as weekday
+        assert get_day_type(datetime.date(2026, 5, 6)) == DayType.weekday
+
 
 class TestGetMonthDates:
     def test_january_31_days(self) -> None:

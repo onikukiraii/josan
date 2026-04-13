@@ -134,7 +134,17 @@ WARD_SHIFT_TYPES = {
 ALL_SHIFT_TYPES = list(ShiftType)
 
 
+# 祝日だが平日扱いにする日付
+WEEKDAY_OVERRIDES: set[datetime.date] = {
+    datetime.date(2026, 5, 6),  # 振替休日だが平日扱い
+}
+
+
 def get_day_type(d: datetime.date) -> DayType:
+    if d in WEEKDAY_OVERRIDES:
+        if d.weekday() == 5:
+            return DayType.saturday
+        return DayType.weekday
     if d.weekday() == 6 or jpholiday.is_holiday(d):
         return DayType.sunday_holiday
     if d.weekday() == 5:
